@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="index.css">
 
     <!-- Tabler Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.2.0/dist/tabler-icons.min.css">
 
     <!-- Leaflet Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -25,7 +25,7 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-logo">
                 <div class="sidebar-logo-icon">
-                    <img src="img/point.png" alt="">
+                    <img src="img/realista-point.png" alt="">
                 </div>
 
             </div>
@@ -56,7 +56,8 @@
                 <div class="topbar-right">
                     <div class="search-box" id="searchBox">
                         <i class="ti ti-search"></i>
-                        <input type="search" id="searchInput" placeholder="Buscar pontos, bairros ou linhas..." aria-label="Buscar pontos, bairros ou linhas">
+                        <input type="search" id="searchInput" placeholder="Buscar ponto, bairro ou linha..." autocomplete="off" aria-label="Buscar ponto, bairro ou linha">
+                        <div class="search-results" id="searchResults"></div>
                     </div>
                     <i class="ti ti-search search-icon-mobile" id="searchMobileBtn"></i>
                 </div>
@@ -123,14 +124,6 @@
                 </div>
             </div>
 
-            <!-- Filter Tags -->
-            <div class="filter-tags" id="filterTags">
-                <button class="filter-tag active-filter" type="button" data-filter="all">
-                    <i class="ti ti-adjustments-horizontal"></i> Todos
-                </button>
-                <button class="filter-tag" type="button" data-filter="nearby">Por Proximidade</button>
-            </div>
-
             <!-- Pontos Próximos -->
             <section class="section" id="pontos">
                 <div class="section-header">
@@ -138,7 +131,6 @@
                         <h2 class="section-title">Pontos Próximos</h2>
                         <p class="section-subtitle" id="nearbySubtitle">Permita a localização para ver os 3 pontos mais próximos.</p>
                     </div>
-                    <span class="section-link" id="showAllStops">Ver Todos ›</span>
                 </div>
                 <div class="cards-grid" id="nearbyStops" aria-live="polite"></div>
             </section>
@@ -148,8 +140,6 @@
                 <h2 class="section-title" style="margin-bottom:16px;">Linhas e Horários</h2>
                 <div class="cards-grid" id="linesGrid"></div>
             </section>
-
-            <!-- Todos os Pontos -->
 
             <!-- Mapa dos Pontos -->
             <section class="section" id="mapa">
@@ -185,28 +175,28 @@
                             Simplificando o transporte público em Barra Bonita com dados precisos e tecnologia de ponta.
                         </p>
                         <div class="footer-social">
-                            <i class="ti ti-share"></i>
-                            <i class="ti ti-world"></i>
+                            <a href="#" target="_blank" rel="noopener" aria-label="Compartilhar"><i class="ti ti-share"></i></a>
+                            <a href="#" target="_blank" rel="noopener" aria-label="Site"><i class="ti ti-world"></i></a>
                         </div>
                     </div>
                     <div class="footer-links-group">
                         <div class="footer-link-col">
                             <span class="footer-link-title">NAVEGAÇÃO</span>
-                            <span class="footer-link">Home</span>
-                            <span class="footer-link">Linhas</span>
-                            <span class="footer-link">Mapa</span>
-                            <span class="footer-link">Horários</span>
+                            <a href="#inicio" class="footer-link">Home</a>
+                            <a href="pontos.html" class="footer-link">Linhas</a>
+                            <a href="#mapa" class="footer-link">Mapa</a>
+                            <a href="pontos.html" class="footer-link">Horários</a>
                         </div>
                         <div class="footer-link-col">
                             <span class="footer-link-title">SUPORTE</span>
-                            <span class="footer-link">FAQ</span>
-                            <span class="footer-link">Contato</span>
-                            <span class="footer-link">Termos</span>
+                            <a href="#" class="footer-link">FAQ</a>
+                            <a href="#" class="footer-link">Contato</a>
+                            <a href="#" class="footer-link">Termos</a>
                         </div>
                     </div>
                 </div>
                 <div class="footer-bottom">
-                    <span>© 2024 BarraBus. Todos os direitos reservados.</span>
+                    <span>© <span id="footerYear">2024</span> BarraBus. Todos os direitos reservados.</span>
                     <span>Desenvolvido para Barra Bonita, SP</span>
                 </div>
             </footer>
@@ -215,6 +205,9 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="script.js"></script>
+    <script>
+        document.getElementById('footerYear').textContent = new Date().getFullYear();
+    </script>
 
 </body>
 </html>

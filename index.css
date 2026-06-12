@@ -74,7 +74,7 @@
             flex-shrink: 0;
         }
         .sidebar-logo-icon:has(img) {
-            width: 160px;
+            width: 100px;
             height: 100px;
             background: rgb(216, 214, 214);
             border-radius: 15%;
@@ -85,12 +85,12 @@
         }
         .sidebar-logo-icon img {
             width: 200%;
-            height: 150%;
+            height: 140%;
             object-fit: contain;
             border-radius: 10%;
         }
         .sidebar-logo span {
-            color: #fff;
+            color: #fff;        
             font-weight: 700;
             font-size: 16px;
         }
@@ -194,6 +194,70 @@
         }
         .search-box input::placeholder {
             color: var(--text-muted);
+        }
+        .search-box {
+            position: relative;
+        }
+        .search-results {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            z-index: 100;
+            max-height: 320px;
+            overflow-y: auto;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+        }
+        .search-results.show {
+            display: block;
+        }
+        .search-result-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            transition: background .15s;
+        }
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+        .search-result-item:hover,
+        .search-result-item.highlighted {
+            background: var(--bg-hover);
+        }
+        .search-result-name {
+            color: #fff;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        .search-result-name i {
+            color: var(--red);
+            font-size: 13px;
+            margin-right: 6px;
+        }
+        .search-result-desc {
+            color: var(--text-muted);
+            font-size: 11px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .search-result-desc span {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .search-result-empty {
+            padding: 14px 12px;
+            color: var(--text-muted);
+            font-size: 12px;
+            text-align: center;
         }
         .search-icon-mobile {
             display: none;
@@ -350,47 +414,6 @@
             font-weight: 800;
             font-size: 28px;
             line-height: 1;
-        }
-
-        /* ========== FILTER TAGS ========== */
-        .filter-tags {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 0 24px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-        .filter-tag {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: var(--bg-hover);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xl);
-            padding: 8px 14px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            transition: all .2s;
-            white-space: nowrap;
-            color: var(--text-secondary);
-            font-family: 'Inter', sans-serif;
-        }
-        button.filter-tag {
-            border: 1px solid var(--border);
-        }
-        .filter-tag:hover {
-            background: #252525;
-            color: #fff;
-        }
-        .filter-tag.active-filter {
-            background: var(--red);
-            border-color: var(--red);
-            color: #fff;
-        }
-        .filter-tag i {
-            font-size: 13px;
         }
 
         /* ========== SECTION ========== */
@@ -933,8 +956,17 @@
             font-size: 13px;
             cursor: pointer;
             transition: color .2s;
+            text-decoration: none;
         }
         .footer-link:hover {
+            color: #fff;
+        }
+        .footer-social a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color .2s;
+        }
+        .footer-social a:hover {
             color: #fff;
         }
         .footer-bottom {
@@ -1017,9 +1049,6 @@
             .section {
                 padding: 0 12px;
             }
-            .filter-tags {
-                padding: 0 12px;
-            }
             .footer-grid {
                 flex-direction: column;
                 gap: 32px;
@@ -1056,9 +1085,6 @@
             .location-card {
                 margin: -20px 8px 0;
                 padding: 12px;
-            }
-            .filter-tags {
-                padding: 0 8px;
             }
             .section {
                 padding: 0 8px;

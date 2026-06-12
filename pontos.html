@@ -6,7 +6,7 @@
     <title>BarraBus - Linhas e Horários</title>
 
     <!-- Tabler Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.2.0/dist/tabler-icons.min.css">
 
     <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -945,103 +945,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         (function() {
-            // === Filter Tags ===
-            var filterTags = document.querySelectorAll('#filterTags .filter-tag');
-            filterTags.forEach(function(tag) {
-                tag.addEventListener('click', function() {
-                    filterTags.forEach(function(t) {
-                        t.className = 'filter-tag inactive-tag';
-                        t.querySelector('.filter-dot').className = 'filter-dot border-dot';
-                    });
-                    this.className = 'filter-tag active-tag';
-                    this.querySelector('.filter-dot').className = 'filter-dot white-dot';
-                    console.log('Filtro:', this.textContent.trim());
-                });
-            });
 
-            // === Direction Tabs ===
-            var dirTabs = document.querySelectorAll('#directionTabs .direction-tab');
-            dirTabs.forEach(function(tab) {
-                tab.addEventListener('click', function() {
-                    dirTabs.forEach(function(t) {
-                        t.className = 'direction-tab inactive-dir';
-                    });
-                    this.className = 'direction-tab active-dir';
-                    console.log('Direção:', this.textContent.trim());
-                });
-            });
-
-            // === Day Tabs ===
-            var dayTabs = document.querySelectorAll('#dayTabs .day-tab');
-            dayTabs.forEach(function(tab) {
-                tab.addEventListener('click', function() {
-                    dayTabs.forEach(function(t) {
-                        t.className = 'day-tab inactive-day';
-                    });
-                    this.className = 'day-tab active-day';
-                    console.log('Dia:', this.textContent.trim());
-                });
-            });
-
-            // === Map Button ===
-            var mapBtn = document.getElementById('mapBtn');
-            if (mapBtn) {
-                mapBtn.addEventListener('click', function() {
-                    window.location.href = 'index.html#mapa';
-                });
-            }
-
-            // === FAB ===
-            var fabBtn = document.getElementById('fabBtn');
-            if (fabBtn) {
-                fabBtn.addEventListener('click', function() {
-                    this.style.transform = 'rotate(360deg)';
-                    this.style.transition = 'transform 0.6s ease';
-                    setTimeout(() => {
-                        this.style.transform = 'rotate(0deg)';
-                    }, 600);
-                    console.log('Atualizando dados...');
-                });
-            }
-
-            // === Schedule Row Hover ===
-            var scheduleRows = document.querySelectorAll('.schedule-row:not(.schedule-row-header)');
-            scheduleRows.forEach(function(row) {
-                row.addEventListener('mouseenter', function() {
-                    this.style.backgroundColor = '#1a1a1a';
-                });
-                row.addEventListener('mouseleave', function() {
-                    this.style.backgroundColor = '#141414';
-                });
-            });
-
-            // === Sidebar Navigation ===
-            var sidebarLinks = document.querySelectorAll('.sidebar-link');
-            sidebarLinks.forEach(function(link) {
-                link.addEventListener('click', function(e) {
-                    var href = this.getAttribute('href') || '';
-                    if (href && href !== '#') return;
-                    e.preventDefault();
-                    sidebarLinks.forEach(function(l) { l.classList.remove('active'); });
-                    this.classList.add('active');
-                    console.log('Navegando para:', this.textContent.trim());
-                });
-            });
-
-            // === Search Icon ===
-            var searchIconBtn = document.querySelector('.search-icon-btn');
-            if (searchIconBtn) {
-                searchIconBtn.addEventListener('click', function() {
-                    var searchInput = document.querySelector('.search-box input');
-                    searchInput.focus();
-                });
-            }
-
-            console.log('🚌 BarraBus - Linhas e Horários - Inicializado');
-        })();
-    </script>
-    <script>
-        (function() {
             var state = {
                 pontos: [],
                 linhas: [],
@@ -1186,10 +1090,6 @@
                         : 'Permita a localizacao para destacar os pontos mais proximos.';
                 }
 
-                if (els.pointsCount) {
-                    els.pointsCount.textContent = pontos.length + ' PONTOS';
-                }
-
                 if (!els.pointsGrid) return;
 
                 if (pontos.length === 0) {
@@ -1199,6 +1099,11 @@
                 }
 
                 renderSidebar(pontos);
+
+                var pointsCountEl = document.querySelector('.stops-count');
+                if (pointsCountEl) {
+                    pointsCountEl.textContent = pontos.length + ' PONTOS';
+                }
 
                 var selectedStillVisible = pontos.some(function(ponto) {
                     return ponto.id === state.selectedPointId;
@@ -1483,15 +1388,27 @@
 
             function getNextDeparture(linhaId) {
                 var horarios = getHorario(linhaId);
-                if (horarios.length === 0) return { time: '--', label: 'Sem horario' };
+                if (horarios.length === 0) return { time: '--', label: 'Sem horario', minutes: Infinity };
                 var now = new Date();
                 var current = now.getHours() * 60 + now.getMinutes();
-                var next = horarios.map(function(time) {
+                var departures = horarios.map(function(time) {
                     var parts = time.split(':').map(Number);
                     var total = parts[0] * 60 + parts[1];
                     return { time: time, diff: total >= current ? total - current : total + 1440 - current };
-                }).sort(function(a, b) { return a.diff - b.diff; })[0];
-                return { time: next.time, label: next.diff < 60 ? next.diff + ' min' : next.time };
+                }).sort(function(a, b) { return a.diff - b.diff; });
+                var next = departures[0];
+                return { time: next.time, label: formatMinutes(next.diff, next.time), minutes: next.diff };
+            }
+
+            function formatMinutes(minutes, time) {
+                if (minutes <= 1) return 'Agora';
+                if (minutes < 60) return minutes + ' min';
+                if (minutes < 1440) {
+                    var hours = Math.floor(minutes / 60);
+                    var rest = minutes % 60;
+                    return rest === 0 ? hours + 'h' : hours + 'h ' + rest + 'min';
+                }
+                return 'Amanha ' + time;
             }
 
             function hasCoords(ponto) {

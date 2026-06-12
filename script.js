@@ -5,7 +5,6 @@ const state = {
   linhas: [],
   horarios: [],
   userPosition: null,
-  selectedFilter: 'all',
   selectedStopId: null,
   map: null,
   markerLayer: null,
@@ -17,16 +16,13 @@ const els = {
   sidebar: document.getElementById('sidebar'),
   sidebarOverlay: document.getElementById('sidebarOverlay'),
   mobileMenuBtn: document.getElementById('mobileMenuBtn'),
+  heroBtn: document.getElementById('heroBtn'),
   searchInput: document.getElementById('searchInput'),
   searchMobileBtn: document.getElementById('searchMobileBtn'),
-  heroBtn: document.getElementById('heroBtn'),
-  filterTags: document.getElementById('filterTags'),
+  searchResults: document.getElementById('searchResults'),
   nearbyStops: document.getElementById('nearbyStops'),
   nearbySubtitle: document.getElementById('nearbySubtitle'),
-  allStopsGrid: document.getElementById('allStopsGrid'),
   linesGrid: document.getElementById('linesGrid'),
-  resultsCount: document.getElementById('resultsCount'),
-  showAllStops: document.getElementById('showAllStops'),
   userLocationText: document.getElementById('userLocationText'),
   nearestStopText: document.getElementById('nearestStopText'),
   nextDepartureText: document.getElementById('nextDepartureText'),
@@ -42,6 +38,8 @@ async function init() {
   setupInteractions();
   initMap();
 
+  setupSearch();
+
   try {
     await carregarDados();
     renderAll();
@@ -49,8 +47,6 @@ async function init() {
   } catch (error) {
     console.error(error);
     showEmpty(els.nearbyStops, 'Não foi possível carregar os dados dos pontos.');
-    showEmpty(els.allStopsGrid, 'Confira se os arquivos JSON estão na pasta dados.');
-    if (els.resultsCount) els.resultsCount.textContent = 'Erro ao carregar';
   }
 }
 
@@ -122,36 +118,6 @@ function setupNavigation() {
 function setupInteractions() {
   els.heroBtn?.addEventListener('click', () => requestUserLocation({ scrollToNearby: true }));
 
-  els.searchInput?.addEventListener('input', () => {
-    state.selectedFilter = 'all';
-    setActiveFilter('all');
-    renderAllStops();
-  });
-
-  els.searchMobileBtn?.addEventListener('click', () => {
-    document.getElementById('searchBox')?.classList.toggle('mobile-open');
-    els.searchInput?.focus();
-  });
-
-  els.filterTags?.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-filter]');
-    if (!button) return;
-
-    state.selectedFilter = button.dataset.filter;
-    setActiveFilter(state.selectedFilter);
-
-    if (state.selectedFilter === 'nearby' && !state.userPosition) {
-      requestUserLocation({ scrollToNearby: true });
-    }
-
-    renderAllStops();
-  });
-
-  els.showAllStops?.addEventListener('click', () => {
-    document.getElementById('todos-pontos')?.scrollIntoView({ behavior: 'smooth' });
-    els.searchInput?.focus();
-  });
-
   document.addEventListener('click', (event) => {
     const action = event.target.closest('[data-action]');
     const stopCard = event.target.closest('[data-stop-id]');
@@ -165,11 +131,7 @@ function setupInteractions() {
 
     if (action?.dataset.action === 'filter-line' && lineCard) {
       event.preventDefault();
-      const lineId = lineCard.dataset.lineId;
-      state.selectedFilter = `linha-${lineId}`;
-      setActiveFilter(state.selectedFilter);
-      renderAllStops();
-      document.getElementById('todos-pontos')?.scrollIntoView({ behavior: 'smooth' });
+      window.location.href = 'pontos.html';
       return;
     }
 
@@ -185,10 +147,113 @@ function setupInteractions() {
   });
 }
 
+function setupSearch() {
+  if (!els.searchInput || !els.searchResults) return;
+
+  els.searchMobileBtn?.addEventListener('click', () => {
+    document.getElementById('searchBox')?.classList.toggle('mobile-open');
+    els.searchInput?.focus();
+  });
+
+  let debounceTimer;
+
+  els.searchInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    const term = normalize(els.searchInput.value);
+    if (!term || state.pontos.length === 0) {
+      hideSearchSuggestions();
+      return;
+    }
+    debounceTimer = setTimeout(() => {
+      renderSearchSuggestions(getSearchSuggestions(term));
+    }, 200);
+  });
+
+  els.searchInput.addEventListener('focus', () => {
+    if (normalize(els.searchInput.value) && state.pontos.length > 0) {
+      debounceTimer = setTimeout(() => {
+        renderSearchSuggestions(getSearchSuggestions(normalize(els.searchInput.value)));
+      }, 200);
+    }
+  });
+
+  els.searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      hideSearchSuggestions();
+      els.searchInput.blur();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-box')) {
+      hideSearchSuggestions();
+    }
+  });
+}
+
+function getSearchSuggestions(term) {
+  const lista = pontosComDistancia();
+  return lista
+    .filter((ponto) => {
+      const linha = getLinha(ponto.linhaId);
+      return normalize([
+        ponto.nome,
+        ponto.endereco,
+        ponto.bairro,
+        linha?.nome || '',
+        linha?.titulo || '',
+      ].join(' ')).includes(term);
+    })
+    .slice(0, 5);
+}
+
+function renderSearchSuggestions(results) {
+  if (results.length === 0) {
+    els.searchResults.innerHTML = '<div class="search-result-empty">Nenhum ponto encontrado</div>';
+    els.searchResults.classList.add('show');
+    return;
+  }
+
+  els.searchResults.innerHTML = results
+    .map((ponto) => {
+      const linha = getLinha(ponto.linhaId);
+      const distanceText = typeof ponto.distancia === 'number'
+        ? `<span><i class="ti ti-navigation"></i> ${formatDistance(ponto.distancia)}</span>`
+        : '';
+      return `
+        <div class="search-result-item" data-stop-id="${ponto.id}">
+          <div class="search-result-name">
+            <i class="ti ti-map-pin"></i>${escapeHtml(ponto.nome)}
+          </div>
+          <div class="search-result-desc">
+            <span>${escapeHtml(ponto.endereco)} - ${escapeHtml(ponto.bairro)}</span>
+            ${distanceText}
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  els.searchResults.classList.add('show');
+
+  els.searchResults.querySelectorAll('.search-result-item').forEach((item) => {
+    item.addEventListener('click', () => {
+      const stopId = Number(item.dataset.stopId);
+      selectStop(stopId, { scrollToMap: true });
+      els.searchInput.value = '';
+      hideSearchSuggestions();
+    });
+  });
+}
+
+function hideSearchSuggestions() {
+  els.searchResults?.classList.remove('show');
+  if (els.searchResults) els.searchResults.innerHTML = '';
+}
+
 function renderAll() {
   renderLines();
   renderNearbyStops();
-  renderAllStops();
   renderMapMarkers();
 }
 
@@ -215,22 +280,6 @@ function renderNearbyStops() {
   els.nearbyStops.innerHTML = nearby
     .map((ponto) => renderStopCard(ponto, { compact: true }))
     .join('');
-}
-
-function renderAllStops() {
-  if (!els.allStopsGrid) return;
-
-  const filtered = getFilteredStops();
-  if (els.resultsCount) {
-    els.resultsCount.textContent = `${filtered.length} de ${state.pontos.length} pontos`;
-  }
-
-  if (filtered.length === 0) {
-    showEmpty(els.allStopsGrid, 'Nenhum ponto encontrado para essa busca.');
-    return;
-  }
-
-  els.allStopsGrid.innerHTML = filtered.map((ponto) => renderStopCard(ponto)).join('');
 }
 
 function renderLines() {
@@ -413,7 +462,6 @@ function requestUserLocation(options = {}) {
 
       setLocationStatus('Localização detectada', 'Calculando...', '--');
       renderNearbyStops();
-      renderAllStops();
       updateUserMarker();
       updateLocationSummary();
 
@@ -514,42 +562,6 @@ function focusLine(lineId) {
   document.getElementById('mapa')?.scrollIntoView({ behavior: 'smooth' });
 }
 
-function getFilteredStops() {
-  let lista = pontosComDistancia();
-  const searchTerm = normalize(els.searchInput?.value || '');
-
-  if (searchTerm) {
-    lista = lista.filter((ponto) => {
-      const linha = getLinha(ponto.linhaId);
-      const horariosLinha = getHorario(ponto.linhaId).join(' ');
-      return normalize([
-        ponto.nome,
-        ponto.endereco,
-        ponto.bairro,
-        linha?.nome,
-        linha?.titulo,
-        horariosLinha,
-      ].join(' ')).includes(searchTerm);
-    });
-  }
-
-  if (state.selectedFilter.startsWith('linha-')) {
-    const lineId = Number(state.selectedFilter.replace('linha-', ''));
-    lista = lista.filter((ponto) => ponto.linhaId === lineId);
-  }
-
-  if (state.selectedFilter === 'nearby' && state.userPosition) {
-    lista = lista.filter(hasCoords).sort((a, b) => a.distancia - b.distancia);
-  } else {
-    lista = lista.sort((a, b) => {
-      if (a.linhaId !== b.linhaId) return a.linhaId - b.linhaId;
-      return a.ordem - b.ordem;
-    });
-  }
-
-  return lista;
-}
-
 function pontosComDistancia() {
   return state.pontos.map((ponto) => {
     if (!state.userPosition || !hasCoords(ponto)) return { ...ponto };
@@ -619,12 +631,6 @@ function formatMinutes(minutes, time) {
 function formatDistance(distanceKm) {
   if (distanceKm < 1) return `${Math.round(distanceKm * 1000)}m`;
   return `${distanceKm.toFixed(1).replace('.', ',')}km`;
-}
-
-function setActiveFilter(filter) {
-  document.querySelectorAll('[data-filter]').forEach((button) => {
-    button.classList.toggle('active-filter', button.dataset.filter === filter);
-  });
 }
 
 function setLocationStatus(location, nearest, departure) {
