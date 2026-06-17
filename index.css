@@ -43,7 +43,7 @@
 
         /* ========== SIDEBAR ========== */
         .sidebar {
-            width: 200px;
+            width: 220px;
             min-height: 100vh;
             background: var(--bg-secondary);
             display: flex;
@@ -55,6 +55,17 @@
             top: 0;
             z-index: 50;
         }
+
+        .sidebar-label {
+            padding: 0 16px;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
         .sidebar-logo {
             display: flex;
             align-items: center;
@@ -62,6 +73,7 @@
             margin-bottom: 24px;
             padding: 0 4px;
         }
+
         .sidebar-logo-icon {
             width: 28px;
             height: 28px;
@@ -73,51 +85,59 @@
             overflow: hidden;
             flex-shrink: 0;
         }
+
         .sidebar-logo-icon:has(img) {
             width: 100px;
             height: 100px;
             background: rgb(216, 214, 214);
             border-radius: 15%;
         }
+
         .sidebar-logo-icon i {
             color: #fff;
             font-size: 16px;
         }
+
         .sidebar-logo-icon img {
             width: 200%;
             height: 140%;
             object-fit: contain;
             border-radius: 10%;
         }
+
         .sidebar-logo span {
             color: #fff;        
             font-weight: 700;
             font-size: 16px;
         }
+
         .sidebar-link {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
+            gap: 10px;
+            padding: 10px 12px;
             border-radius: var(--radius-md);
             cursor: pointer;
             transition: all .2s;
-            color: var(--text-secondary);
-            font-size: 13px;
-            font-weight: 500;
             text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
         }
+
         .sidebar-link:hover {
             background: var(--bg-hover);
             color: #fff;
         }
+
         .sidebar-link.active {
             background: var(--red);
             color: #fff;
             font-weight: 600;
         }
+
         .sidebar-link i {
-            font-size: 16px;
+            font-size: 18px;
         }
 
         /* ========== MAIN ========== */
