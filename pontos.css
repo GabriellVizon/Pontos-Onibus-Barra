@@ -671,13 +671,14 @@
             border: 1px solid var(--border);
             border-radius: var(--radius-xl);
             overflow: hidden;
-            height: 320px;
+            height: 330px;
         }
 
         .route-map {
             width: 100%;
-            height: 264px;
+            height: 260px;
             background: var(--bg-card);
+            z-index: 0;
         }
 
         .route-map .leaflet-container {
