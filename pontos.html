@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="pontos.css">
 </head>
 <body>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
@@ -45,6 +46,9 @@
     <main class="main">
         <!-- Topbar -->
         <header class="topbar">
+            <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Abrir menu">
+                <i class="ti ti-menu-2"></i>
+            </button>
             <div class="topbar-brand">
                 <div class="topbar-brand-icon">
                     <i class="ti ti-bus"></i>
@@ -138,9 +142,9 @@
                     <div class="schedule-header">
                         <span class="schedule-title">Tabela de Horários</span>
                         <div class="schedule-day-tabs" id="dayTabs">
-                            <div class="day-tab active-day">ÚTEIS</div>
-                            <div class="day-tab inactive-day">SÁBADOS</div>
-                            <div class="day-tab inactive-day">DOM/FER</div>
+                            <div class="day-tab active-day" data-day="uteis">ÚTEIS</div>
+                            <div class="day-tab inactive-day" data-day="sabados">SÁBADOS</div>
+                            <div class="day-tab inactive-day" data-day="domingos">DOM/FER</div>
                         </div>
                     </div>
 
@@ -261,6 +265,7 @@
     <button class="fab" id="fabBtn" aria-label="Atualizar">
         <i class="ti ti-refresh"></i>
     </button>
+    
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
@@ -272,6 +277,7 @@
                 horarios: [],
                 userPosition: null,
                 selectedFilter: 'all',
+                selectedDay: 'uteis',
                 selectedPointId: null,
                 map: null,
                 markerLayer: null,
@@ -281,7 +287,14 @@
 
             var els = {
                 searchInput: document.getElementById('searchInput'),
+                searchBox: document.getElementById('searchBox'),
+                searchResults: document.getElementById('searchResults'),
+                searchMobileBtn: document.getElementById('searchMobileBtn'),
+                mobileMenuBtn: document.getElementById('mobileMenuBtn'),
+                sidebar: document.getElementById('sidebar'),
+                sidebarOverlay: document.getElementById('sidebarOverlay'),
                 filterTags: document.querySelectorAll('#filterTags .filter-tag'),
+                dayTabs: document.querySelectorAll('#dayTabs .day-tab'),
                 pointsGrid: document.getElementById('pointsGrid'),
                 pageSubtitle: document.getElementById('pageSubtitle'),
                 selectedPointName: document.getElementById('selectedPointName'),
@@ -302,6 +315,7 @@
             init();
 
             async function init() {
+                applyInitialFilter();
                 bindEvents();
 
                 try {
@@ -335,15 +349,59 @@
 
             function bindEvents() {
                 if (els.searchInput) {
-                    els.searchInput.addEventListener('input', render);
+                    els.searchInput.addEventListener('input', function () {
+                        render();
+                        renderSearchSuggestions();
+                    });
+                    els.searchInput.addEventListener('focus', renderSearchSuggestions);
                 }
+
+                if (els.searchMobileBtn) {
+                    els.searchMobileBtn.addEventListener('click', function () {
+                        if (els.searchBox) els.searchBox.classList.toggle('mobile-open');
+                        if (els.searchInput) els.searchInput.focus();
+                    });
+                }
+
+                if (els.mobileMenuBtn) {
+                    els.mobileMenuBtn.addEventListener('click', openSidebar);
+                }
+
+                if (els.sidebarOverlay) {
+                    els.sidebarOverlay.addEventListener('click', closeSidebar);
+                }
+
+                document.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape') {
+                        closeSidebar();
+                        hideSearchSuggestions();
+                    }
+                });
+
+                document.addEventListener('click', function (event) {
+                    if (!event.target.closest('.search-box')) hideSearchSuggestions();
+                    if (event.target.closest('.sidebar-link')) closeSidebar();
+                }
+                );
 
                 els.filterTags.forEach(function (tag) {
                     tag.addEventListener('click', function () {
                         state.selectedFilter = tag.dataset.filter || 'all';
                         setActiveFilter(state.selectedFilter);
+                        updateUrlFilter();
                         if (state.selectedFilter === 'nearby' && !state.userPosition) requestLocation();
                         render();
+                    });
+                });
+
+                els.dayTabs.forEach(function (tab) {
+                    tab.addEventListener('click', function () {
+                        state.selectedDay = tab.dataset.day || 'uteis';
+                        setActiveDay(state.selectedDay);
+                        if (state.selectedPointId) {
+                            var ponto = state.pontos.find(function (item) { return item.id === state.selectedPointId; });
+                            if (ponto) renderSchedule(ponto.linhaId, getNextDeparture(ponto.linhaId).time);
+                        }
                     });
                 });
 
@@ -352,6 +410,14 @@
                         var card = event.target.closest('[data-point-id]');
                         if (!card) return;
                         selectPoint(Number(card.dataset.pointId));
+                    });
+                }
+
+                if (els.stopsCard) {
+                    els.stopsCard.addEventListener('click', function (event) {
+                        var item = event.target.closest('[data-point-id]');
+                        if (!item) return;
+                        selectPoint(Number(item.dataset.pointId));
                     });
                 }
 
@@ -370,6 +436,82 @@
                         render();
                     });
                 }
+            }
+
+            function applyInitialFilter() {
+                var params = new URLSearchParams(window.location.search);
+                var lineId = Number(params.get('linha'));
+                if ([1, 2, 3].includes(lineId)) {
+                    state.selectedFilter = 'linha-' + lineId;
+                    setActiveFilter(state.selectedFilter);
+                }
+                setActiveDay(state.selectedDay);
+            }
+
+            function updateUrlFilter() {
+                var url = new URL(window.location.href);
+                if (state.selectedFilter.indexOf('linha-') === 0) {
+                    url.searchParams.set('linha', state.selectedFilter.replace('linha-', ''));
+                } else {
+                    url.searchParams.delete('linha');
+                }
+                window.history.replaceState({}, '', url);
+            }
+
+            function openSidebar() {
+                if (els.sidebar) els.sidebar.classList.add('open');
+                if (els.sidebarOverlay) els.sidebarOverlay.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeSidebar() {
+                if (els.sidebar) els.sidebar.classList.remove('open');
+                if (els.sidebarOverlay) els.sidebarOverlay.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+
+            function renderSearchSuggestions() {
+                if (!els.searchResults || !els.searchInput) return;
+                var term = normalize(els.searchInput.value);
+                if (!term) {
+                    hideSearchSuggestions();
+                    return;
+                }
+
+                var results = getFilteredPoints('all').filter(function (ponto) {
+                    var linha = getLinha(ponto.linhaId);
+                    return normalize([ponto.nome, ponto.endereco, ponto.bairro, linha && linha.nome, linha && linha.titulo].join(' ')).includes(term);
+                }).slice(0, 5);
+
+                if (results.length === 0) {
+                    els.searchResults.innerHTML = '<div class="search-result-empty">Nenhum ponto encontrado</div>';
+                } else {
+                    els.searchResults.innerHTML = results.map(function (ponto) {
+                        var linha = getLinha(ponto.linhaId);
+                        return [
+                            '<div class="search-result-item" data-point-id="' + ponto.id + '">',
+                            '<div class="search-result-name"><i class="ti ti-map-pin"></i>' + escapeHtml(ponto.nome) + '</div>',
+                            '<div class="search-result-desc">' + escapeHtml(ponto.endereco) + ' - ' + escapeHtml(ponto.bairro) + ' - ' + escapeHtml(linha ? linha.nome : 'Linha') + '</div>',
+                            '</div>'
+                        ].join('');
+                    }).join('');
+                }
+
+                els.searchResults.classList.add('show');
+                els.searchResults.querySelectorAll('[data-point-id]').forEach(function (item) {
+                    item.addEventListener('click', function () {
+                        selectPoint(Number(item.dataset.pointId));
+                        els.searchInput.value = '';
+                        hideSearchSuggestions();
+                        render();
+                    });
+                });
+            }
+
+            function hideSearchSuggestions() {
+                if (!els.searchResults) return;
+                els.searchResults.classList.remove('show');
+                els.searchResults.innerHTML = '';
             }
 
             function requestLocation() {
@@ -595,7 +737,7 @@
             }
 
             function renderSchedule(linhaId, nextTime) {
-                var horarios = getHorario(linhaId);
+                var horarios = getHorario(linhaId, state.selectedDay);
                 if (!els.scheduleTable) return;
 
                 if (horarios.length === 0) {
@@ -691,6 +833,13 @@
                 });
             }
 
+            function setActiveDay(day) {
+                els.dayTabs.forEach(function (tab) {
+                    var active = (tab.dataset.day || 'uteis') === day;
+                    tab.className = 'day-tab ' + (active ? 'active-day' : 'inactive-day');
+                });
+            }
+
             function markSelectedCard() {
                 document.querySelectorAll('[data-point-id]').forEach(function (card) {
                     card.classList.toggle('selected', Number(card.dataset.pointId) === state.selectedPointId);
@@ -701,9 +850,11 @@
                 return state.linhas.find(function (linha) { return linha.id === linhaId; });
             }
 
-            function getHorario(linhaId) {
+            function getHorario(linhaId, day) {
                 var item = state.horarios.find(function (horario) { return horario.linhaId === linhaId; });
-                return item ? item.horarios : [];
+                if (!item) return [];
+                if (Array.isArray(item.horarios)) return item.horarios;
+                return item.horarios && item.horarios[day || 'uteis'] ? item.horarios[day || 'uteis'] : [];
             }
 
             function getNextDeparture(linhaId) {

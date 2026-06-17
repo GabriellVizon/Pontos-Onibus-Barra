@@ -131,7 +131,7 @@ function setupInteractions() {
 
     if (action?.dataset.action === 'filter-line' && lineCard) {
       event.preventDefault();
-      window.location.href = 'pontos.html';
+      window.location.href = `pontos.html?linha=${lineCard.dataset.lineId}`;
       return;
     }
 
@@ -221,7 +221,7 @@ function renderSearchSuggestions(results) {
         ? `<span><i class="ti ti-navigation"></i> ${formatDistance(ponto.distancia)}</span>`
         : '';
       return `
-        <div class="search-result-item" data-stop-id="${ponto.id}">
+        <div class="search-result-item" style="z-index: 0;" data-stop-id="${ponto.id}">
           <div class="search-result-name">
             <i class="ti ti-map-pin"></i>${escapeHtml(ponto.nome)}
           </div>
