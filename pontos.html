@@ -1,714 +1,32 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BarraBus - Linhas e Horários</title>
 
     <!-- Tabler Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.2.0/dist/tabler-icons.min.css">
 
     <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
 
-    <style>
-        :root {
-            --bg-primary: #0d0d0d;
-            --bg-secondary: #141414;
-            --bg-card: #1a1a1a;
-            --bg-hover: #1f1f1f;
-            --border: #1f1f1f;
-            --border-light: #2a2a2a;
-            --red: #e53935;
-            --red-dark: #3d1515;
-            --text-primary: #ffffff;
-            --text-secondary: #9ca3af;
-            --text-muted: #6b7280;
-            --radius-sm: 4px;
-            --radius-md: 8px;
-            --radius-lg: 12px;
-            --radius-xl: 16px;
-            --radius-full: 20px;
-            --shadow-red: 0 4px 12px rgba(229,57,53,0.4);
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-            display: flex;
-        }
-
-        /* ========== SIDEBAR ========== */
-        .sidebar {
-            width: 220px;
-            min-height: 100vh;
-            background: var(--bg-primary);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            padding-top: 24px;
-            flex-shrink: 0;
-            position: sticky;
-            top: 0;
-        }
-        .sidebar-logo {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 0 24px;
-            margin-bottom: 40px;
-        }
-        .sidebar-logo-icon {
-            width: 28px;
-            height: 28px;
-            background: var(--red);
-            border-radius: var(--radius-md);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .sidebar-logo-icon i { color: #fff; font-size: 16px; }
-        .sidebar-logo span {
-            color: #fff;
-            font-size: 18px;
-            font-weight: 700;
-            letter-spacing: -0.01em;
-        }
-        .sidebar-label {
-            padding: 0 16px;
-            margin-bottom: 8px;
-            color: var(--text-muted);
-            font-size: 11px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-        .sidebar-nav {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            padding: 0 12px;
-        }
-        .sidebar-link {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 12px;
-            border-radius: var(--radius-md);
-            cursor: pointer;
-            transition: all .2s;
-            text-decoration: none;
-            color: var(--text-secondary);
-            font-size: 14px;
-            font-weight: 500;
-        }
-        .sidebar-link:hover { background: var(--bg-hover); color: #fff; }
-        .sidebar-link.active { background: var(--red); color: #fff; font-weight: 600; }
-        .sidebar-link i { font-size: 18px; }
-
-        /* ========== MAIN ========== */
-        .main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            background: var(--bg-primary);
-        }
-        .topbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 20px 32px;
-            border-bottom: 1px solid var(--border);
-        }
-        .topbar-brand {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .topbar-brand-icon {
-            width: 28px;
-            height: 28px;
-            background: var(--red);
-            border-radius: var(--radius-md);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .topbar-brand-icon i { color: #fff; font-size: 16px; }
-        .topbar-brand span {
-            color: #fff;
-            font-size: 18px;
-            font-weight: 700;
-            letter-spacing: -0.01em;
-        }
-        .topbar-right {
-            flex: 1;
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            gap: 12px;
-        }
-        .search-box {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-md);
-            padding: 8px 14px;
-            width: 260px;
-        }
-        .search-box i { color: var(--text-muted); font-size: 16px; }
-        .search-box input {
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            font-size: 13px;
-            font-family: 'Inter', sans-serif;
-            width: 100%;
-            outline: none;
-        }
-        .search-box input::placeholder { color: var(--text-secondary); }
-        .search-icon-btn {
-            width: 36px;
-            height: 36px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-md);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: .2s;
-        }
-        .search-icon-btn:hover { background: var(--bg-hover); }
-        .search-icon-btn i { color: var(--text-secondary); font-size: 16px; }
-
-        /* ========== CONTENT ========== */
-        .content {
-            flex: 1;
-            padding: 32px;
-            display: flex;
-            gap: 20px;
-        }
-        .content-main { flex: 1; }
-        .content-sidebar { width: 280px; display: flex; flex-direction: column; gap: 16px; }
-
-        /* Page Header */
-        .page-title {
-            color: #fff;
-            font-size: 28px;
-            font-weight: 700;
-            line-height: 36px;
-            letter-spacing: -0.02em;
-            margin-bottom: 8px;
-        }
-        .page-subtitle {
-            color: var(--text-secondary);
-            font-size: 14px;
-            line-height: 20px;
-            margin-bottom: 28px;
-        }
-
-        /* Filter Tags */
-        .filter-tags {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 28px;
-            flex-wrap: wrap;
-        }
-        .filter-tag {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 9px 18px;
-            border-radius: var(--radius-full);
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all .2s;
-            white-space: nowrap;
-        }
-        .filter-tag.active-tag {
-            background: var(--red);
-            color: #fff;
-        }
-        .filter-tag.inactive-tag {
-            background: var(--bg-card);
-            border: 1px solid var(--border-light);
-            color: var(--text-secondary);
-        }
-        .filter-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-        .filter-dot.white-dot { background: #fff; }
-        .filter-dot.border-dot { border: 1px solid var(--text-muted); }
-
-        /* ========== LINE DETAIL CARD ========== */
-        .line-detail-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xl);
-            padding: 28px;
-        }
-        .line-header {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-        .line-label {
-            color: var(--red);
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-        .line-name {
-            color: #fff;
-            font-size: 26px;
-            font-weight: 700;
-            line-height: 32px;
-            letter-spacing: -0.02em;
-            margin-top: 6px;
-        }
-        .live-badge {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: #1a0a0a;
-            border: 1px solid var(--red-dark);
-            border-radius: var(--radius-full);
-            padding: 5px 10px;
-            margin-left: 12px;
-            flex-shrink: 0;
-        }
-        .live-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--red);
-        }
-        .live-text {
-            color: var(--red);
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        /* Info Cards */
-        .info-cards {
-            display: flex;
-            gap: 14px;
-            margin-bottom: 24px;
-        }
-        .info-card {
-            flex: 1;
-            background: var(--bg-card);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-lg);
-            padding: 16px;
-        }
-        .info-card-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 10px;
-        }
-        .info-card-header i { color: var(--red); font-size: 16px; }
-        .info-card-label {
-            color: var(--text-secondary);
-            font-size: 11px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-        }
-        .info-card-value {
-            color: #fff;
-            font-size: 36px;
-            font-weight: 700;
-            line-height: 40px;
-        }
-        .info-card-value.small-value {
-            font-size: 20px;
-            line-height: 28px;
-            font-weight: 600;
-        }
-        .info-card-unit {
-            color: var(--text-secondary);
-            font-size: 16px;
-            font-weight: 400;
-        }
-        .info-card-sub {
-            color: var(--text-muted);
-            font-size: 12px;
-            margin-top: 6px;
-        }
-
-        /* Direction Tabs */
-        .direction-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 24px;
-        }
-        .direction-tab {
-            padding: 8px 16px;
-            border-radius: var(--radius-md);
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            transition: all .2s;
-        }
-        .direction-tab.active-dir {
-            background: var(--bg-hover);
-            border: 1px solid var(--border-light);
-            color: #fff;
-        }
-        .direction-tab.inactive-dir {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            font-weight: 400;
-        }
-
-        /* Schedule Header */
-        .schedule-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-        }
-        .schedule-title {
-            color: #fff;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        .schedule-day-tabs {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .day-tab {
-            border-radius: var(--radius-md);
-            padding: 4px 10px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 500;
-            transition: all .2s;
-        }
-        .day-tab.active-day {
-            background: var(--red);
-            color: #fff;
-            font-weight: 600;
-        }
-        .day-tab.inactive-day {
-            background: var(--bg-card);
-            border: 1px solid var(--border-light);
-            color: var(--text-secondary);
-        }
-
-        /* Schedule Table */
-        .schedule-table {
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .schedule-row {
-            display: flex;
-            align-items: center;
-            padding: 14px 16px;
-            border-bottom: 1px solid var(--border);
-            background: var(--bg-secondary);
-        }
-        .schedule-row:last-child { border-bottom: none; }
-        .schedule-row-header {
-            background: var(--bg-card);
-            padding: 10px 16px;
-        }
-        .schedule-hour {
-            width: 80px;
-            color: var(--red);
-            font-size: 15px;
-            font-weight: 600;
-        }
-        .schedule-header-cell {
-            color: var(--text-muted);
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-        .schedule-times {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            flex: 1;
-        }
-        .schedule-time {
-            color: var(--text-secondary);
-            font-size: 14px;
-        }
-        .schedule-time.highlight-time {
-            color: var(--red);
-            font-weight: 600;
-        }
-        .schedule-time.active-time {
-            color: #fff;
-            font-weight: 600;
-        }
-        .schedule-note {
-            margin-top: 12px;
-            color: var(--text-muted);
-            font-size: 11px;
-        }
-
-        /* ========== MAP CARD ========== */
-        .map-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xl);
-            overflow: hidden;
-            height: 320px;
-        }
-        .route-map {
-            width: 100%;
-            height: 264px;
-            background: var(--bg-card);
-        }
-        .route-map .leaflet-container {
-            background: var(--bg-card);
-        }
-        .route-map .leaflet-popup-content-wrapper,
-        .route-map .leaflet-popup-tip {
-            background: #111;
-            color: #fff;
-            border: 1px solid var(--border-light);
-        }
-        .route-map .leaflet-popup-content {
-            color: var(--text-secondary);
-            font-family: 'Inter', sans-serif;
-            font-size: 12px;
-        }
-        .route-map .leaflet-popup-content strong {
-            color: #fff;
-        }
-        .map-btn {
-            background: var(--red);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px;
-            cursor: pointer;
-            transition: .2s;
-        }
-        .map-btn:hover { background: #c62828; }
-        .map-btn i { color: #fff; font-size: 16px; }
-        .map-btn span { color: #fff; font-size: 14px; font-weight: 600; }
-
-        /* ========== STOPS CARD ========== */
-        .stops-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xl);
-            padding: 20px;
-        }
-        .stops-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-        }
-        .stops-title { color: #fff; font-size: 16px; font-weight: 600; }
-        .stops-count { color: var(--text-muted); font-size: 12px; font-weight: 500; }
-        .stop-item {
-            display: flex;
-            gap: 12px;
-        }
-        .stop-line-col {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            flex-shrink: 0;
-        }
-        .stop-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-top: 4px;
-            flex-shrink: 0;
-        }
-        .stop-dot.red-dot { background: var(--red); }
-        .stop-dot.gray-dot { background: #4a4a4a; }
-        .stop-dot.pulse-dot { background: var(--red); box-shadow: 0 0 0 4px rgba(229,57,53,0.3); }
-        .stop-line {
-            width: 2px;
-            flex: 1;
-            background: var(--border-light);
-            margin: 4px 0;
-        }
-        .stop-info { padding-bottom: 16px; }
-        .stop-name { color: #fff; font-size: 13px; font-weight: 500; }
-        .stop-desc { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
-        .stop-badge {
-            display: inline-block;
-            background: var(--red);
-            color: #fff;
-            font-size: 10px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: var(--radius-sm);
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            margin-top: 4px;
-        }
-
-        /* ========== FAB ========== */
-        .fab {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            width: 44px;
-            height: 44px;
-            background: var(--red);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: var(--shadow-red);
-            transition: all .2s;
-            z-index: 50;
-            border: none;
-        }
-        .fab:hover { transform: scale(1.1); }
-        .fab i { color: #fff; font-size: 20px; }
-
-        .points-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 14px;
-            margin-top: 20px;
-        }
-        .point-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-lg);
-            padding: 16px;
-            cursor: pointer;
-            transition: .2s;
-        }
-        .point-card:hover,
-        .point-card.selected {
-            border-color: var(--red);
-            background: var(--bg-hover);
-        }
-        .point-card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 10px;
-        }
-        .point-card-title {
-            color: #fff;
-            font-size: 15px;
-            font-weight: 700;
-            line-height: 20px;
-        }
-        .point-distance {
-            color: var(--red);
-            font-size: 12px;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-        .point-address {
-            color: var(--text-secondary);
-            font-size: 13px;
-            line-height: 18px;
-            margin-bottom: 12px;
-        }
-        .point-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .point-chip {
-            color: var(--text-secondary);
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-full);
-            padding: 4px 9px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-        .empty-state {
-            grid-column: 1 / -1;
-            color: var(--text-secondary);
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 18px;
-        }
-        .route-select {
-            width: 100%;
-            background: var(--bg-card);
-            border: 1px solid var(--border-light);
-            color: #fff;
-            border-radius: var(--radius-md);
-            padding: 10px 12px;
-            font-family: 'Inter', sans-serif;
-            margin-bottom: 18px;
-            outline: none;
-        }
-
-        /* ========== RESPONSIVE ========== */
-        @media (max-width: 1024px) {
-            .sidebar { display: none; }
-            .content { flex-direction: column; padding: 24px 16px; }
-            .content-sidebar { width: 100%; }
-            .info-cards { flex-direction: column; }
-            .topbar { padding: 16px; }
-            .search-box { width: 180px; }
-        }
-        @media (max-width: 768px) {
-            .content { padding: 16px 8px; }
-            .line-detail-card { padding: 16px; }
-            .line-name { font-size: 20px; line-height: 26px; }
-            .info-card-value { font-size: 28px; line-height: 32px; }
-            .schedule-times { flex-wrap: wrap; gap: 12px; }
-            .topbar { padding: 12px 8px; flex-wrap: wrap; gap: 8px; }
-            .search-box { width: 140px; }
-            .direction-tabs { flex-wrap: wrap; }
-        }
-        @media (max-width: 480px) {
-            .page-title { font-size: 22px; line-height: 28px; }
-            .filter-tags { gap: 6px; }
-            .filter-tag { padding: 7px 14px; font-size: 12px; }
-            .schedule-row { padding: 10px 12px; }
-            .schedule-hour { width: 50px; font-size: 13px; }
-        }
-    </style>
+    <link rel="stylesheet" href="pontos.css">
 </head>
 <body>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-logo">
             <div class="sidebar-logo-icon">
-                <i class="ti ti-bus"></i>
+                <img src="img/realista-point.png" alt="">
             </div>
-            <span>BarraBus</span>
         </div>
         <div class="sidebar-label">MENU</div>
         <nav class="sidebar-nav">
@@ -728,6 +46,9 @@
     <main class="main">
         <!-- Topbar -->
         <header class="topbar">
+            <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Abrir menu">
+                <i class="ti ti-menu-2"></i>
+            </button>
             <div class="topbar-brand">
                 <div class="topbar-brand-icon">
                     <i class="ti ti-bus"></i>
@@ -735,14 +56,15 @@
                 <span>BarraBus</span>
             </div>
             <div class="topbar-right">
-                <div class="search-box">
+                <div class="search-box" id="searchBox">
                     <i class="ti ti-search"></i>
-                    <input type="search" id="searchInput" placeholder="Buscar pontos, bairros ou linhas...">
+                    <input type="search" id="searchInput" placeholder="Buscar ponto, bairro ou linha..." autocomplete="off" aria-label="Buscar ponto, bairro ou linha">
+                    <div class="search-results" id="searchResults"></div>
                 </div>
                 <div class="search-icon-btn">
-                    <i class="ti ti-search"></i>
+                    <i class="ti ti-search search-icon-mobile" id="searchMobileBtn"></i>
                 </div>
-            </div>
+            </div> 
         </header>
 
         <!-- Content -->
@@ -776,6 +98,15 @@
                     </div>
                 </div>
 
+                <!-- Line Select -->
+                <select class="route-select" id="lineSelect" aria-label="Selecionar linha">
+                    <option value="all">Todas as linhas</option>
+                    <option value="nearby">Próximos</option>
+                    <option value="linha-1">Linha 01</option>
+                    <option value="linha-2">Linha 02</option>
+                    <option value="linha-3">Linha 03</option>
+                </select>
+
                 <!-- Line Detail Card -->
                 <div class="line-detail-card">
                     <div class="line-header">
@@ -796,8 +127,10 @@
                                 <i class="ti ti-map-pin"></i>
                                 <span class="info-card-label">DISTÂNCIA</span>
                             </div>
-                            <span class="info-card-value small-value" id="selectedDistance">Aguardando localização</span>
-                            <p class="info-card-sub" id="selectedAddress">Permita o GPS para ordenar por proximidade.</p>
+                            <span class="info-card-value small-value" id="selectedDistance">Aguardando
+                                localização</span>
+                            <p class="info-card-sub" id="selectedAddress">Permita o GPS para ordenar por proximidade.
+                            </p>
                         </div>
                         <div class="info-card">
                             <div class="info-card-header">
@@ -817,10 +150,8 @@
                     <!-- Schedule -->
                     <div class="schedule-header">
                         <span class="schedule-title">Tabela de Horários</span>
-                        <div class="schedule-day-tabs" id="dayTabs">
-                            <div class="day-tab active-day">ÚTEIS</div>
-                            <div class="day-tab inactive-day">SÁBADOS</div>
-                            <div class="day-tab inactive-day">DOM/FER</div>
+                        <div class="schedule-day-tabs">
+                            <span class="day-tab active-day">ÚTEIS</span>
                         </div>
                     </div>
 
@@ -864,6 +195,7 @@
                     <p class="schedule-note" id="scheduleNote">Selecione um ponto para ver os horários da linha.</p>
                 </div>
                 <div class="points-grid" id="pointsGrid" aria-live="polite"></div>
+                <div class="show-more-container" id="showMoreContainer"></div>
             </div>
 
             <!-- Sidebar Column -->
@@ -941,107 +273,12 @@
     <button class="fab" id="fabBtn" aria-label="Atualizar">
         <i class="ti ti-refresh"></i>
     </button>
+    
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        (function() {
-            // === Filter Tags ===
-            var filterTags = document.querySelectorAll('#filterTags .filter-tag');
-            filterTags.forEach(function(tag) {
-                tag.addEventListener('click', function() {
-                    filterTags.forEach(function(t) {
-                        t.className = 'filter-tag inactive-tag';
-                        t.querySelector('.filter-dot').className = 'filter-dot border-dot';
-                    });
-                    this.className = 'filter-tag active-tag';
-                    this.querySelector('.filter-dot').className = 'filter-dot white-dot';
-                    console.log('Filtro:', this.textContent.trim());
-                });
-            });
+        (function () {
 
-            // === Direction Tabs ===
-            var dirTabs = document.querySelectorAll('#directionTabs .direction-tab');
-            dirTabs.forEach(function(tab) {
-                tab.addEventListener('click', function() {
-                    dirTabs.forEach(function(t) {
-                        t.className = 'direction-tab inactive-dir';
-                    });
-                    this.className = 'direction-tab active-dir';
-                    console.log('Direção:', this.textContent.trim());
-                });
-            });
-
-            // === Day Tabs ===
-            var dayTabs = document.querySelectorAll('#dayTabs .day-tab');
-            dayTabs.forEach(function(tab) {
-                tab.addEventListener('click', function() {
-                    dayTabs.forEach(function(t) {
-                        t.className = 'day-tab inactive-day';
-                    });
-                    this.className = 'day-tab active-day';
-                    console.log('Dia:', this.textContent.trim());
-                });
-            });
-
-            // === Map Button ===
-            var mapBtn = document.getElementById('mapBtn');
-            if (mapBtn) {
-                mapBtn.addEventListener('click', function() {
-                    window.location.href = 'index.html#mapa';
-                });
-            }
-
-            // === FAB ===
-            var fabBtn = document.getElementById('fabBtn');
-            if (fabBtn) {
-                fabBtn.addEventListener('click', function() {
-                    this.style.transform = 'rotate(360deg)';
-                    this.style.transition = 'transform 0.6s ease';
-                    setTimeout(() => {
-                        this.style.transform = 'rotate(0deg)';
-                    }, 600);
-                    console.log('Atualizando dados...');
-                });
-            }
-
-            // === Schedule Row Hover ===
-            var scheduleRows = document.querySelectorAll('.schedule-row:not(.schedule-row-header)');
-            scheduleRows.forEach(function(row) {
-                row.addEventListener('mouseenter', function() {
-                    this.style.backgroundColor = '#1a1a1a';
-                });
-                row.addEventListener('mouseleave', function() {
-                    this.style.backgroundColor = '#141414';
-                });
-            });
-
-            // === Sidebar Navigation ===
-            var sidebarLinks = document.querySelectorAll('.sidebar-link');
-            sidebarLinks.forEach(function(link) {
-                link.addEventListener('click', function(e) {
-                    var href = this.getAttribute('href') || '';
-                    if (href && href !== '#') return;
-                    e.preventDefault();
-                    sidebarLinks.forEach(function(l) { l.classList.remove('active'); });
-                    this.classList.add('active');
-                    console.log('Navegando para:', this.textContent.trim());
-                });
-            });
-
-            // === Search Icon ===
-            var searchIconBtn = document.querySelector('.search-icon-btn');
-            if (searchIconBtn) {
-                searchIconBtn.addEventListener('click', function() {
-                    var searchInput = document.querySelector('.search-box input');
-                    searchInput.focus();
-                });
-            }
-
-            console.log('🚌 BarraBus - Linhas e Horários - Inicializado');
-        })();
-    </script>
-    <script>
-        (function() {
             var state = {
                 pontos: [],
                 linhas: [],
@@ -1049,6 +286,7 @@
                 userPosition: null,
                 selectedFilter: 'all',
                 selectedPointId: null,
+                visibleCount: 5,
                 map: null,
                 markerLayer: null,
                 userMarker: null,
@@ -1057,6 +295,12 @@
 
             var els = {
                 searchInput: document.getElementById('searchInput'),
+                searchBox: document.getElementById('searchBox'),
+                searchResults: document.getElementById('searchResults'),
+                searchMobileBtn: document.getElementById('searchMobileBtn'),
+                mobileMenuBtn: document.getElementById('mobileMenuBtn'),
+                sidebar: document.getElementById('sidebar'),
+                sidebarOverlay: document.getElementById('sidebarOverlay'),
                 filterTags: document.querySelectorAll('#filterTags .filter-tag'),
                 pointsGrid: document.getElementById('pointsGrid'),
                 pageSubtitle: document.getElementById('pageSubtitle'),
@@ -1079,6 +323,7 @@
 
             async function init() {
                 bindEvents();
+                applyInitialFilter();
 
                 try {
                     var responses = await Promise.all([
@@ -1087,11 +332,11 @@
                         fetch('./dados/horarios.json')
                     ]);
 
-                    if (responses.some(function(response) { return !response.ok; })) {
+                    if (responses.some(function (response) { return !response.ok; })) {
                         throw new Error('Falha ao carregar os arquivos JSON.');
                     }
 
-                    var data = await Promise.all(responses.map(function(response) { return response.json(); }));
+                    var data = await Promise.all(responses.map(function (response) { return response.json(); }));
                     state.pontos = data[0];
                     state.linhas = data[1];
                     state.horarios = data[2];
@@ -1111,28 +356,83 @@
 
             function bindEvents() {
                 if (els.searchInput) {
-                    els.searchInput.addEventListener('input', render);
+                    els.searchInput.addEventListener('input', function () {
+                        render();
+                        renderSearchSuggestions();
+                    });
+                    els.searchInput.addEventListener('focus', renderSearchSuggestions);
                 }
 
-                els.filterTags.forEach(function(tag) {
-                    tag.addEventListener('click', function() {
-                        state.selectedFilter = tag.dataset.filter || 'all';
+                if (els.searchMobileBtn) {
+                    els.searchMobileBtn.addEventListener('click', function () {
+                        if (els.searchBox) els.searchBox.classList.toggle('mobile-open');
+                        if (els.searchInput) els.searchInput.focus();
+                    });
+                }
+
+                if (els.mobileMenuBtn) {
+                    els.mobileMenuBtn.addEventListener('click', openSidebar);
+                }
+
+                if (els.sidebarOverlay) {
+                    els.sidebarOverlay.addEventListener('click', closeSidebar);
+                }
+
+                document.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape') {
+                        closeSidebar();
+                        hideSearchSuggestions();
+                    }
+                });
+
+                document.addEventListener('click', function (event) {
+                    if (!event.target.closest('.search-box')) hideSearchSuggestions();
+                    if (event.target.closest('.sidebar-link')) closeSidebar();
+                }
+                );
+
+                var lineSelect = document.getElementById('lineSelect');
+                if (lineSelect) {
+                    lineSelect.addEventListener('change', function () {
+                        state.selectedFilter = this.value;
+                        state.visibleCount = 5;
                         setActiveFilter(state.selectedFilter);
+                        updateUrlFilter();
+                        if (state.selectedFilter === 'nearby' && !state.userPosition) requestLocation();
+                        render();
+                    });
+                }
+
+                els.filterTags.forEach(function (tag) {
+                    tag.addEventListener('click', function () {
+                        state.selectedFilter = tag.dataset.filter || 'all';
+                        state.visibleCount = 5;
+                        setActiveFilter(state.selectedFilter);
+                        updateUrlFilter();
+                        syncLineSelect();
                         if (state.selectedFilter === 'nearby' && !state.userPosition) requestLocation();
                         render();
                     });
                 });
 
                 if (els.pointsGrid) {
-                    els.pointsGrid.addEventListener('click', function(event) {
+                    els.pointsGrid.addEventListener('click', function (event) {
                         var card = event.target.closest('[data-point-id]');
                         if (!card) return;
                         selectPoint(Number(card.dataset.pointId));
                     });
                 }
 
+                if (els.stopsCard) {
+                    els.stopsCard.addEventListener('click', function (event) {
+                        var item = event.target.closest('[data-point-id]');
+                        if (!item) return;
+                        selectPoint(Number(item.dataset.pointId));
+                    });
+                }
+
                 if (els.mapBtn) {
-                    els.mapBtn.addEventListener('click', function(event) {
+                    els.mapBtn.addEventListener('click', function (event) {
                         event.preventDefault();
                         event.stopImmediatePropagation();
                         fitMapToPoints();
@@ -1141,11 +441,92 @@
 
                 var fabBtn = document.getElementById('fabBtn');
                 if (fabBtn) {
-                    fabBtn.addEventListener('click', function() {
+                    fabBtn.addEventListener('click', function () {
                         requestLocation();
                         render();
                     });
                 }
+            }
+
+            function applyInitialFilter() {
+                var params = new URLSearchParams(window.location.search);
+                var lineId = Number(params.get('linha'));
+                if ([1, 2, 3].includes(lineId)) {
+                    state.selectedFilter = 'linha-' + lineId;
+                }
+                setActiveFilter(state.selectedFilter);
+                syncLineSelect();
+            }
+
+            function updateUrlFilter() {
+                var url = new URL(window.location.href);
+                if (state.selectedFilter.indexOf('linha-') === 0) {
+                    url.searchParams.set('linha', state.selectedFilter.replace('linha-', ''));
+                } else {
+                    url.searchParams.delete('linha');
+                }
+                window.history.replaceState({}, '', url);
+            }
+
+            function openSidebar() {
+                if (els.sidebar) els.sidebar.classList.add('open');
+                if (els.sidebarOverlay) els.sidebarOverlay.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeSidebar() {
+                if (els.sidebar) els.sidebar.classList.remove('open');
+                if (els.sidebarOverlay) els.sidebarOverlay.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+
+            function renderSuggestionsList(results) {
+                if (!els.searchResults) return;
+                if (results.length === 0) {
+                    els.searchResults.innerHTML = '<div class="search-result-empty">Nenhum ponto encontrado</div>';
+                } else {
+                    els.searchResults.innerHTML = results.map(function (ponto) {
+                        var linha = getLinha(ponto.linhaId);
+                        return [
+                            '<div class="search-result-item" data-point-id="' + ponto.id + '">',
+                            '<div class="search-result-name"><i class="ti ti-map-pin"></i>' + escapeHtml(ponto.nome) + '</div>',
+                            '<div class="search-result-desc">' + escapeHtml(ponto.endereco) + ' - ' + escapeHtml(ponto.bairro) + ' - ' + escapeHtml(linha ? linha.nome : 'Linha') + '</div>',
+                            '</div>'
+                        ].join('');
+                    }).join('');
+                }
+
+                els.searchResults.classList.add('show');
+                els.searchResults.querySelectorAll('[data-point-id]').forEach(function (item) {
+                    item.addEventListener('click', function () {
+                        selectPoint(Number(item.dataset.pointId));
+                        els.searchInput.value = '';
+                        hideSearchSuggestions();
+                        render();
+                    });
+                });
+            }
+
+            function renderSearchSuggestions() {
+                if (!els.searchResults || !els.searchInput) return;
+                var term = normalize(els.searchInput.value);
+                if (!term) {
+                    renderSuggestionsList(state.pontos.map(withDistance).slice(0, 5));
+                    return;
+                }
+
+                var results = getFilteredPoints('all').filter(function (ponto) {
+                    var linha = getLinha(ponto.linhaId);
+                    return normalize([ponto.nome, ponto.endereco, ponto.bairro, linha && linha.nome, linha && linha.titulo].join(' ')).includes(term);
+                }).slice(0, 5);
+
+                renderSuggestionsList(results);
+            }
+
+            function hideSearchSuggestions() {
+                if (!els.searchResults) return;
+                els.searchResults.classList.remove('show');
+                els.searchResults.innerHTML = '';
             }
 
             function requestLocation() {
@@ -1156,7 +537,7 @@
 
                 if (els.locationStatus) els.locationStatus.textContent = 'PEDINDO GPS';
                 navigator.geolocation.getCurrentPosition(
-                    function(position) {
+                    function (position) {
                         state.userPosition = {
                             lat: position.coords.latitude,
                             lng: position.coords.longitude
@@ -1169,7 +550,7 @@
                             if (nearest) selectPoint(nearest.id);
                         }
                     },
-                    function() {
+                    function () {
                         if (els.locationStatus) els.locationStatus.textContent = 'GPS NEGADO';
                         render();
                     },
@@ -1179,6 +560,8 @@
 
             function render() {
                 var pontos = getFilteredPoints();
+                var showAll = state.visibleCount >= pontos.length;
+                var visible = showAll ? pontos : pontos.slice(0, state.visibleCount);
 
                 if (els.pageSubtitle) {
                     els.pageSubtitle.textContent = state.userPosition
@@ -1186,26 +569,40 @@
                         : 'Permita a localizacao para destacar os pontos mais proximos.';
                 }
 
-                if (els.pointsCount) {
-                    els.pointsCount.textContent = pontos.length + ' PONTOS';
-                }
-
                 if (!els.pointsGrid) return;
 
                 if (pontos.length === 0) {
                     els.pointsGrid.innerHTML = '<div class="empty-state">Nenhum ponto encontrado para essa busca.</div>';
                 } else {
-                    els.pointsGrid.innerHTML = pontos.map(renderPointCard).join('');
+                    els.pointsGrid.innerHTML = visible.map(renderPointCard).join('');
+                }
+
+                var container = document.getElementById('showMoreContainer');
+                if (container) {
+                    if (pontos.length > state.visibleCount) {
+                        container.innerHTML = '<button class="show-more-btn" id="showMoreBtn">Ver mais pontos (' + pontos.length + ' total)</button>';
+                        document.getElementById('showMoreBtn')?.addEventListener('click', function () {
+                            state.visibleCount = pontos.length;
+                            render();
+                        });
+                    } else {
+                        container.innerHTML = '';
+                    }
                 }
 
                 renderSidebar(pontos);
 
-                var selectedStillVisible = pontos.some(function(ponto) {
+                var pointsCountEl = document.querySelector('.stops-count');
+                if (pointsCountEl) {
+                    pointsCountEl.textContent = pontos.length + ' CADASTRADOS';
+                }
+
+                var selectedStillVisible = visible.some(function (ponto) {
                     return ponto.id === state.selectedPointId;
                 });
 
-                if ((!state.selectedPointId || !selectedStillVisible) && pontos[0]) {
-                    selectPoint(pontos[0].id, true);
+                if ((!state.selectedPointId || !selectedStillVisible) && visible[0]) {
+                    selectPoint(visible[0].id, true);
                 } else {
                     markSelectedCard();
                 }
@@ -1239,7 +636,7 @@
                     '<span class="stops-title">' + (state.userPosition ? 'Mais proximos' : 'Primeiros pontos') + '</span>',
                     '<span class="stops-count">' + state.pontos.length + ' CADASTRADOS</span>',
                     '</div>',
-                    list.map(function(ponto, index) {
+                    list.map(function (ponto, index) {
                         return [
                             '<div class="stop-item" data-point-id="' + ponto.id + '">',
                             '<div class="stop-line-col">',
@@ -1257,7 +654,7 @@
             }
 
             function selectPoint(pointId, silent) {
-                var ponto = state.pontos.find(function(item) { return item.id === pointId; });
+                var ponto = state.pontos.find(function (item) { return item.id === pointId; });
                 if (!ponto) return;
 
                 state.selectedPointId = pointId;
@@ -1294,7 +691,7 @@
                 }).addTo(state.map);
 
                 state.markerLayer = L.layerGroup().addTo(state.map);
-                setTimeout(function() {
+                setTimeout(function () {
                     state.map.invalidateSize();
                     fitMapToPoints();
                 }, 100);
@@ -1306,7 +703,7 @@
                 state.markerLayer.clearLayers();
                 state.markers.clear();
 
-                state.pontos.filter(hasCoords).forEach(function(ponto) {
+                state.pontos.filter(hasCoords).forEach(function (ponto) {
                     var linha = getLinha(ponto.linhaId);
                     var marker = L.marker([Number(ponto.lat), Number(ponto.lng)])
                         .bindPopup(
@@ -1314,7 +711,7 @@
                             escapeHtml(ponto.endereco) + '<br>' +
                             escapeHtml(linha ? linha.nome : 'Linha') + ' - ' + escapeHtml(ponto.bairro)
                         )
-                        .on('click', function() {
+                        .on('click', function () {
                             selectPoint(ponto.id, true);
                         });
 
@@ -1340,7 +737,7 @@
                 if (points.length === 0) return;
 
                 state.map.invalidateSize();
-                var bounds = L.latLngBounds(points.map(function(ponto) {
+                var bounds = L.latLngBounds(points.map(function (ponto) {
                     return [Number(ponto.lat), Number(ponto.lng)];
                 }));
 
@@ -1378,7 +775,7 @@
                     return;
                 }
 
-                var byHour = horarios.reduce(function(acc, horario) {
+                var byHour = horarios.reduce(function (acc, horario) {
                     var hour = horario.split(':')[0] + 'h';
                     acc[hour] = acc[hour] || [];
                     acc[hour].push(horario);
@@ -1390,12 +787,12 @@
                     '<span class="schedule-header-cell" style="width:80px;">HORA</span>',
                     '<span class="schedule-header-cell">PARTIDAS ESTIMADAS</span>',
                     '</div>',
-                    Object.keys(byHour).map(function(hour) {
+                    Object.keys(byHour).map(function (hour) {
                         return [
                             '<div class="schedule-row">',
                             '<span class="schedule-hour">' + hour + '</span>',
                             '<div class="schedule-times">',
-                            byHour[hour].map(function(time) {
+                            byHour[hour].map(function (time) {
                                 return '<span class="schedule-time ' + (time === nextTime ? 'active-time' : '') + '">' + time + '</span>';
                             }).join(''),
                             '</div>',
@@ -1415,7 +812,7 @@
                 var lista = state.pontos.map(withDistance);
 
                 if (term) {
-                    lista = lista.filter(function(ponto) {
+                    lista = lista.filter(function (ponto) {
                         var linha = getLinha(ponto.linhaId);
                         return normalize([ponto.nome, ponto.endereco, ponto.bairro, linha && linha.nome, linha && linha.titulo].join(' ')).includes(term);
                     });
@@ -1423,15 +820,15 @@
 
                 if (filter.indexOf('linha-') === 0) {
                     var lineId = Number(filter.replace('linha-', ''));
-                    lista = lista.filter(function(ponto) { return ponto.linhaId === lineId; });
+                    lista = lista.filter(function (ponto) { return ponto.linhaId === lineId; });
                 }
 
                 if (filter === 'nearby') {
-                    lista = lista.filter(hasCoords).sort(function(a, b) {
+                    lista = lista.filter(hasCoords).sort(function (a, b) {
                         return (a.distancia || Infinity) - (b.distancia || Infinity);
                     });
                 } else {
-                    lista = lista.sort(function(a, b) {
+                    lista = lista.sort(function (a, b) {
                         if (a.linhaId !== b.linhaId) return a.linhaId - b.linhaId;
                         return a.ordem - b.ordem;
                     });
@@ -1458,7 +855,7 @@
             }
 
             function setActiveFilter(filter) {
-                els.filterTags.forEach(function(tag) {
+                els.filterTags.forEach(function (tag) {
                     var active = tag.dataset.filter === filter;
                     tag.className = 'filter-tag ' + (active ? 'active-tag' : 'inactive-tag');
                     var dot = tag.querySelector('.filter-dot');
@@ -1466,32 +863,49 @@
                 });
             }
 
+            function syncLineSelect() {
+                var select = document.getElementById('lineSelect');
+                if (select) select.value = state.selectedFilter;
+            }
+
             function markSelectedCard() {
-                document.querySelectorAll('[data-point-id]').forEach(function(card) {
+                document.querySelectorAll('[data-point-id]').forEach(function (card) {
                     card.classList.toggle('selected', Number(card.dataset.pointId) === state.selectedPointId);
                 });
             }
 
             function getLinha(linhaId) {
-                return state.linhas.find(function(linha) { return linha.id === linhaId; });
+                return state.linhas.find(function (linha) { return linha.id === linhaId; });
             }
 
             function getHorario(linhaId) {
-                var item = state.horarios.find(function(horario) { return horario.linhaId === linhaId; });
+                var item = state.horarios.find(function (horario) { return horario.linhaId === linhaId; });
                 return item ? item.horarios : [];
             }
 
             function getNextDeparture(linhaId) {
                 var horarios = getHorario(linhaId);
-                if (horarios.length === 0) return { time: '--', label: 'Sem horario' };
+                if (horarios.length === 0) return { time: '--', label: 'Sem horario', minutes: Infinity };
                 var now = new Date();
                 var current = now.getHours() * 60 + now.getMinutes();
-                var next = horarios.map(function(time) {
+                var departures = horarios.map(function (time) {
                     var parts = time.split(':').map(Number);
                     var total = parts[0] * 60 + parts[1];
                     return { time: time, diff: total >= current ? total - current : total + 1440 - current };
-                }).sort(function(a, b) { return a.diff - b.diff; })[0];
-                return { time: next.time, label: next.diff < 60 ? next.diff + ' min' : next.time };
+                }).sort(function (a, b) { return a.diff - b.diff; });
+                var next = departures[0];
+                return { time: next.time, label: formatMinutes(next.diff, next.time), minutes: next.diff };
+            }
+
+            function formatMinutes(minutes, time) {
+                if (minutes <= 1) return 'Agora';
+                if (minutes < 60) return minutes + ' min';
+                if (minutes < 1440) {
+                    var hours = Math.floor(minutes / 60);
+                    var rest = minutes % 60;
+                    return rest === 0 ? hours + 'h' : hours + 'h ' + rest + 'min';
+                }
+                return 'Amanha ' + time;
             }
 
             function hasCoords(ponto) {
@@ -1534,4 +948,5 @@
         })();
     </script>
 </body>
+
 </html>
