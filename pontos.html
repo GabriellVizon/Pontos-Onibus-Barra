@@ -150,8 +150,10 @@
                     <!-- Schedule -->
                     <div class="schedule-header">
                         <span class="schedule-title">Tabela de Horários</span>
-                        <div class="schedule-day-tabs">
-                            <span class="day-tab active-day">ÚTEIS</span>
+                        <div class="schedule-day-tabs" id="dayTabs">
+                            <div class="day-tab active-day" data-day="uteis">ÚTEIS</div>
+                            <div class="day-tab inactive-day" data-day="sabados">SÁBADOS</div>
+                            <div class="day-tab inactive-day" data-day="domingos">DOM/FER</div>
                         </div>
                     </div>
 
@@ -285,6 +287,7 @@
                 horarios: [],
                 userPosition: null,
                 selectedFilter: 'all',
+                selectedDay: 'uteis',
                 selectedPointId: null,
                 visibleCount: 5,
                 map: null,
@@ -302,6 +305,7 @@
                 sidebar: document.getElementById('sidebar'),
                 sidebarOverlay: document.getElementById('sidebarOverlay'),
                 filterTags: document.querySelectorAll('#filterTags .filter-tag'),
+                dayTabs: document.querySelectorAll('#dayTabs .day-tab'),
                 pointsGrid: document.getElementById('pointsGrid'),
                 pageSubtitle: document.getElementById('pageSubtitle'),
                 selectedPointName: document.getElementById('selectedPointName'),
@@ -322,6 +326,7 @@
             init();
 
             async function init() {
+                applyInitialFilter();
                 bindEvents();
                 applyInitialFilter();
 
@@ -415,6 +420,17 @@
                     });
                 });
 
+                els.dayTabs.forEach(function (tab) {
+                    tab.addEventListener('click', function () {
+                        state.selectedDay = tab.dataset.day || 'uteis';
+                        setActiveDay(state.selectedDay);
+                        if (state.selectedPointId) {
+                            var ponto = state.pontos.find(function (item) { return item.id === state.selectedPointId; });
+                            if (ponto) renderSchedule(ponto.linhaId, getNextDeparture(ponto.linhaId).time);
+                        }
+                    });
+                });
+
                 if (els.pointsGrid) {
                     els.pointsGrid.addEventListener('click', function (event) {
                         var card = event.target.closest('[data-point-id]');
@@ -456,6 +472,7 @@
                 }
                 setActiveFilter(state.selectedFilter);
                 syncLineSelect();
+                setActiveDay(state.selectedDay);
             }
 
             function updateUrlFilter() {
@@ -522,7 +539,6 @@
 
                 renderSuggestionsList(results);
             }
-
             function hideSearchSuggestions() {
                 if (!els.searchResults) return;
                 els.searchResults.classList.remove('show');
@@ -767,7 +783,7 @@
             }
 
             function renderSchedule(linhaId, nextTime) {
-                var horarios = getHorario(linhaId);
+                var horarios = getHorario(linhaId, state.selectedDay);
                 if (!els.scheduleTable) return;
 
                 if (horarios.length === 0) {
@@ -868,6 +884,13 @@
                 if (select) select.value = state.selectedFilter;
             }
 
+            function setActiveDay(day) {
+                els.dayTabs.forEach(function (tab) {
+                    var active = (tab.dataset.day || 'uteis') === day;
+                    tab.className = 'day-tab ' + (active ? 'active-day' : 'inactive-day');
+                });
+            }
+
             function markSelectedCard() {
                 document.querySelectorAll('[data-point-id]').forEach(function (card) {
                     card.classList.toggle('selected', Number(card.dataset.pointId) === state.selectedPointId);
@@ -878,9 +901,11 @@
                 return state.linhas.find(function (linha) { return linha.id === linhaId; });
             }
 
-            function getHorario(linhaId) {
+            function getHorario(linhaId, day) {
                 var item = state.horarios.find(function (horario) { return horario.linhaId === linhaId; });
-                return item ? item.horarios : [];
+                if (!item) return [];
+                if (Array.isArray(item.horarios)) return item.horarios;
+                return item.horarios && item.horarios[day || 'uteis'] ? item.horarios[day || 'uteis'] : [];
             }
 
             function getNextDeparture(linhaId) {

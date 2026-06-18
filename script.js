@@ -39,7 +39,7 @@ async function init() {
   initMap();
 
   setupSearch();
-  
+
   try {
     await carregarDados();
     renderAll();

@@ -309,6 +309,7 @@
             cursor: pointer;
         }
 
+
         .mobile-menu-btn {
             display: none;
             width: 36px;
@@ -991,6 +992,7 @@
 
         .search-box.mobile-open {
             display: flex;
+
         }
 
         /* ========== RESPONSIVE ========== */

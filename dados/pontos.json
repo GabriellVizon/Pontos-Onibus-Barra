@@ -26,8 +26,8 @@
     "nome": "Posto de Saúde Central",
     "endereco": "Rua Manoel de Almeida Camargo",
     "bairro": "Centro",
-    "lat": null,
-    "lng": null
+    "lat": -22.491590,
+    "lng": -48.550550
   },
   {
     "id": 4,
@@ -66,8 +66,8 @@
     "nome": "Supermercado Dia",
     "endereco": "Av. da Saúde, 181",
     "bairro": "Centro",
-    "lat": null,
-    "lng": null
+    "lat": -22.495200,
+    "lng": -48.562100
   },
   {
     "id": 8,
@@ -127,8 +127,8 @@
     "nome": "Supermercado Dia",
     "endereco": "Av. da Saúde, 181",
     "bairro": "Centro",
-    "lat": null,
-    "lng": null
+    "lat": -22.495200,
+    "lng": -48.562100
   },
   {
     "id": 14,
@@ -245,7 +245,7 @@
     "id": 25,
     "linhaId": 3,
     "ordem": 5,
-    "nome": "Casa",
+    "nome": "Bar do Amaral",
     "endereco": "Rua Armando Moretti, 429",
     "bairro": "Sonho Nosso IV",
     "lat": -22.460582,
