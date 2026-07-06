@@ -278,6 +278,8 @@
     
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/favorites.js"></script>
+    <script src="js/modal.js"></script>
     <script>
         (function () {
 
@@ -346,6 +348,15 @@
                     state.linhas = data[1];
                     state.horarios = data[2];
 
+                    Modal.init({
+                      onFavToggle: function () {
+                        render();
+                        document.querySelectorAll('.fav-btn').forEach(function (btn) {
+                          var id = btn.getAttribute('data-id');
+                          if (id) btn.classList.toggle('favorited', Favorites.isFavorite(id));
+                        });
+                      }
+                    });
                     initMap();
                     renderMapMarkers();
                     render();
@@ -433,9 +444,20 @@
 
                 if (els.pointsGrid) {
                     els.pointsGrid.addEventListener('click', function (event) {
+                        var favBtn = event.target.closest('.fav-btn');
+                        if (favBtn) {
+                            event.stopPropagation();
+                            var id = favBtn.dataset.id;
+                            Favorites.toggleFavorite(id);
+                            favBtn.classList.toggle('favorited');
+                            favBtn.classList.remove('beat');
+                            void favBtn.offsetWidth;
+                            favBtn.classList.add('beat');
+                            return;
+                        }
                         var card = event.target.closest('[data-point-id]');
                         if (!card) return;
-                        selectPoint(Number(card.dataset.pointId));
+                        openPointModal(Number(card.dataset.pointId));
                     });
                 }
 
@@ -443,7 +465,7 @@
                     els.stopsCard.addEventListener('click', function (event) {
                         var item = event.target.closest('[data-point-id]');
                         if (!item) return;
-                        selectPoint(Number(item.dataset.pointId));
+                        openPointModal(Number(item.dataset.pointId));
                     });
                 }
 
@@ -516,7 +538,7 @@
                 els.searchResults.classList.add('show');
                 els.searchResults.querySelectorAll('[data-point-id]').forEach(function (item) {
                     item.addEventListener('click', function () {
-                        selectPoint(Number(item.dataset.pointId));
+                        openPointModal(Number(item.dataset.pointId));
                         els.searchInput.value = '';
                         hideSearchSuggestions();
                         render();
@@ -627,11 +649,17 @@
             function renderPointCard(ponto) {
                 var linha = getLinha(ponto.linhaId);
                 var selected = ponto.id === state.selectedPointId ? ' selected' : '';
+                var isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
                 return [
                     '<div class="point-card' + selected + '" data-point-id="' + ponto.id + '">',
                     '<div class="point-card-header">',
                     '<h3 class="point-card-title">' + escapeHtml(ponto.nome) + '</h3>',
+                    '<div class="card-header-right">',
                     '<span class="point-distance">' + escapeHtml(getDistanceText(ponto)) + '</span>',
+                    '<button class="fav-btn' + (isFav ? ' favorited' : '') + '" data-id="' + ponto.id + '" aria-label="Favoritar">',
+                    '<i class="ti ti-heart"></i>',
+                    '</button>',
+                    '</div>',
                     '</div>',
                     '<p class="point-address">' + escapeHtml(ponto.endereco) + '</p>',
                     '<div class="point-meta">',
@@ -667,6 +695,45 @@
                         ].join('');
                     }).join('')
                 ].join('');
+            }
+
+            function openPointModal(pointId) {
+                var ponto = state.pontos.find(function (p) { return p.id === pointId; });
+                if (!ponto) return;
+
+                var linha = getLinha(ponto.linhaId);
+                var next = getNextDeparture(ponto.linhaId);
+                var horarios = getHorario(ponto.linhaId);
+                var isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
+
+                var distancia = null;
+                if (state.userPosition && hasCoords(ponto)) {
+                    distancia = distanceKm(state.userPosition.lat, state.userPosition.lng, Number(ponto.lat), Number(ponto.lng));
+                }
+
+                var allLinePoints = state.pontos
+                    .filter(function (p) { return p.linhaId === ponto.linhaId; })
+                    .sort(function (a, b) { return a.ordem - b.ordem; });
+
+                Modal.open({
+                    ponto: ponto,
+                    linha: linha,
+                    next: next,
+                    horarios: horarios,
+                    distancia: distancia,
+                    isFav: isFav,
+                    allLinePoints: allLinePoints,
+                    onMainMapFocus: function (p) {
+                        if (hasCoords(p) && state.map) {
+                            state.map.invalidateSize();
+                            state.map.setView([Number(p.lat), Number(p.lng)], 16, { animate: true });
+                            var m = state.markers.get(p.id);
+                            if (m) m.openPopup();
+                        }
+                    }
+                });
+
+                selectPoint(pointId, true);
             }
 
             function selectPoint(pointId, silent) {
@@ -728,7 +795,7 @@
                             escapeHtml(linha ? linha.nome : 'Linha') + ' - ' + escapeHtml(ponto.bairro)
                         )
                         .on('click', function () {
-                            selectPoint(ponto.id, true);
+                            openPointModal(ponto.id);
                         });
 
                     marker.addTo(state.markerLayer);

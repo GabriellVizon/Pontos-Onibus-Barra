@@ -124,6 +124,17 @@
                 </div>
             </div>
 
+             <!-- Pontos Favoritos -->
+            <section class="section" id="favoritos">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">Pontos Favoritos</h2>
+                        <p class="section-subtitle" id="favSubtitle">Ver os meus pontos favoritos.</p>
+                    </div>
+                </div>
+                <div class="cards-grid" id="favoriteStops" aria-live="polite"></div>
+            </section>
+
             <!-- Pontos Próximos -->
             <section class="section" id="pontos">
                 <div class="section-header">
@@ -204,6 +215,8 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/favorites.js"></script>
+    <script src="js/modal.js"></script>
     <script src="script.js"></script>
     <script>
         document.getElementById('footerYear').textContent = new Date().getFullYear();

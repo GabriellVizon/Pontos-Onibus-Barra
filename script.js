@@ -22,6 +22,8 @@ const els = {
   searchResults: document.getElementById('searchResults'),
   nearbyStops: document.getElementById('nearbyStops'),
   nearbySubtitle: document.getElementById('nearbySubtitle'),
+  favStops: document.getElementById('favoriteStops'),
+  favSubtitle: document.getElementById('favSubtitle'),
   linesGrid: document.getElementById('linesGrid'),
   userLocationText: document.getElementById('userLocationText'),
   nearestStopText: document.getElementById('nearestStopText'),
@@ -42,6 +44,15 @@ async function init() {
 
   try {
     await carregarDados();
+    Modal.init({
+      onFavToggle: function () {
+        renderFavoriteStops();
+        document.querySelectorAll('.fav-btn').forEach(function (btn) {
+          var id = btn.getAttribute('data-id');
+          if (id) btn.classList.toggle('favorited', Favorites.isFavorite(id));
+        });
+      }
+    });
     renderAll();
     requestUserLocation();
   } catch (error) {
@@ -141,8 +152,21 @@ function setupInteractions() {
       return;
     }
 
+    const favBtn = event.target.closest('.fav-btn');
+    if (favBtn) {
+      event.stopPropagation();
+      const id = favBtn.dataset.id;
+      Favorites.toggleFavorite(id);
+      favBtn.classList.toggle('favorited');
+      favBtn.classList.remove('beat');
+      void favBtn.offsetWidth;
+      favBtn.classList.add('beat');
+      renderFavoriteStops();
+      return;
+    }
+
     if (stopCard && !event.target.closest('a')) {
-      selectStop(Number(stopCard.dataset.stopId));
+      openStopModal(Number(stopCard.dataset.stopId));
     }
   });
 }
@@ -243,7 +267,7 @@ function renderSearchSuggestions(results) {
   els.searchResults.querySelectorAll('.search-result-item').forEach((item) => {
     item.addEventListener('click', () => {
       const stopId = Number(item.dataset.stopId);
-      selectStop(stopId, { scrollToMap: true });
+      openStopModal(stopId);
       els.searchInput.value = '';
       hideSearchSuggestions();
     });
@@ -257,8 +281,23 @@ function hideSearchSuggestions() {
 
 function renderAll() {
   renderLines();
+  renderFavoriteStops();
   renderNearbyStops();
   renderMapMarkers();
+}
+
+function renderFavoriteStops() {
+  if (!els.favStops) return;
+  const favIds = typeof Favorites !== 'undefined' ? Favorites.getFavorites() : [];
+  if (favIds.length === 0) {
+    els.favStops.innerHTML = '<div class="empty-fav">Você ainda não favoritou nenhum ponto. Clique no <i class="ti ti-heart"></i> para adicionar.</div>';
+    if (els.favSubtitle) els.favSubtitle.textContent = 'Nenhum favorito ainda.';
+    return;
+  }
+  if (els.favSubtitle) els.favSubtitle.textContent = 'Seus pontos favoritos.';
+  const lista = state.userPosition ? pontosComDistancia() : state.pontos;
+  const favPontos = lista.filter(function (p) { return favIds.indexOf(String(p.id)) !== -1; });
+  els.favStops.innerHTML = favPontos.map(function (p) { return renderStopCard(p, { compact: true }); }).join('');
 }
 
 function renderNearbyStops() {
@@ -356,6 +395,7 @@ function renderStopCard(ponto, options = {}) {
   const routeUrl = hasCoords(ponto)
     ? `https://www.google.com/maps/dir/?api=1&destination=${ponto.lat},${ponto.lng}`
     : '';
+  const isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
 
   return `
     <div class="card stop-card ${selected}" data-stop-id="${ponto.id}">
@@ -363,7 +403,12 @@ function renderStopCard(ponto, options = {}) {
         <div class="card-icon">
           <i class="ti ti-map-pin"></i>
         </div>
-        <span class="card-distance">${escapeHtml(distanceText)}</span>
+        <div class="card-header-right">
+          <span class="card-distance">${escapeHtml(distanceText)}</span>
+          <button class="fav-btn ${isFav ? 'favorited' : ''}" data-id="${ponto.id}" aria-label="Favoritar">
+            <i class="ti ti-heart"></i>
+          </button>
+        </div>
       </div>
       <h3 class="card-title">${escapeHtml(ponto.nome)}</h3>
       <p class="card-address">${escapeHtml(ponto.endereco)}</p>
@@ -437,7 +482,7 @@ function renderMapMarkers() {
         ${escapeHtml(ponto.endereco)}<br>
         ${escapeHtml(linha?.nome || '')} - ${escapeHtml(ponto.bairro)}
       `)
-      .on('click', () => selectStop(ponto.id));
+      .on('click', function () { openStopModal(ponto.id); });
 
     marker.addTo(state.markerLayer);
     state.markers.set(ponto.id, marker);
@@ -526,6 +571,45 @@ function updateLocationSummary() {
   if (!state.selectedStopId) {
     selectStop(nearest.id);
   }
+}
+
+function openStopModal(stopId) {
+  const ponto = state.pontos.find(function (p) { return p.id === stopId; });
+  if (!ponto) return;
+
+  const linha = getLinha(ponto.linhaId);
+  const next = getNextDeparture(ponto.linhaId);
+  const horarios = getHorario(ponto.linhaId);
+  const isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
+
+  let distancia = null;
+  if (state.userPosition && hasCoords(ponto)) {
+    distancia = calcularDistanciaKm(state.userPosition.lat, state.userPosition.lng, ponto.lat, ponto.lng);
+  }
+
+  const allLinePoints = state.pontos
+    .filter(function (p) { return p.linhaId === ponto.linhaId; })
+    .sort(function (a, b) { return a.ordem - b.ordem; });
+
+  Modal.open({
+    ponto: ponto,
+    linha: linha,
+    next: next,
+    horarios: horarios,
+    distancia: distancia,
+    isFav: isFav,
+    allLinePoints: allLinePoints,
+    onMainMapFocus: function (p) {
+      if (hasCoords(p) && state.map) {
+        state.map.setView([p.lat, p.lng], 16, { animate: true });
+        var marker = state.markers.get(p.id);
+        if (marker) marker.openPopup();
+      }
+      document.getElementById('mapa')?.scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+
+  selectStop(stopId);
 }
 
 function selectStop(stopId, options = {}) {
