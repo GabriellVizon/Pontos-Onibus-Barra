@@ -6,6 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BarraBus - Linhas e Horários</title>
 
+    <meta property="og:title" content="BarraBus">
+    <meta property="og:description" content="Pontos, linhas e horários de ônibus em Barra Bonita">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://barrabus.app">
+    <meta property="og:locale" content="pt_BR">
+
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23e53935'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white'%3E🚌%3C/text%3E%3C/svg%3E">
+
     <!-- Tabler Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.2.0/dist/tabler-icons.min.css">
 
@@ -19,6 +27,21 @@
     <link rel="stylesheet" href="pontos.css">
 </head>
 <body>
+    <div id="splash" class="splash">
+        <div class="splash-content">
+            <div class="splash-icon"><i class="ti ti-bus"></i></div>
+            <h1 class="splash-title">BarraBus</h1>
+            <p class="splash-sub">Carregando...</p>
+            <div class="splash-spinner"></div>
+        </div>
+    </div>
+
+    <div id="offlineBanner" class="offline-banner" style="display:none">Você está offline</div>
+
+    <button id="backToTop" class="back-to-top" aria-label="Voltar ao topo">
+        <i class="ti ti-chevron-up"></i>
+    </button>
+
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <!-- Sidebar -->
@@ -36,9 +59,6 @@
             <a href="pontos.html" class="sidebar-link active">
                 <i class="ti ti-map-pin"></i> PONTOS
             </a>
-            <a href="index.html#mapa" class="sidebar-link">
-                <i class="ti ti-map"></i> MAPA
-            </a>
         </nav>
     </aside>
 
@@ -49,13 +69,16 @@
             <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Abrir menu">
                 <i class="ti ti-menu-2"></i>
             </button>
-            <div class="topbar-brand">
+            <a href="index.html" class="topbar-brand">
                 <div class="topbar-brand-icon">
                     <i class="ti ti-bus"></i>
                 </div>
                 <span>BarraBus</span>
-            </div>
+            </a>
             <div class="topbar-right">
+                <button class="theme-toggle" id="themeToggle" type="button" aria-label="Modo claro">
+                    <i class="ti ti-sun"></i>
+                </button>
                 <div class="search-box" id="searchBox">
                     <i class="ti ti-search"></i>
                     <input type="search" id="searchInput" placeholder="Buscar ponto, bairro ou linha..." autocomplete="off" aria-label="Buscar ponto, bairro ou linha">
@@ -150,11 +173,6 @@
                     <!-- Schedule -->
                     <div class="schedule-header">
                         <span class="schedule-title">Tabela de Horários</span>
-                        <div class="schedule-day-tabs" id="dayTabs">
-                            <div class="day-tab active-day" data-day="uteis">ÚTEIS</div>
-                            <div class="day-tab inactive-day" data-day="sabados">SÁBADOS</div>
-                            <div class="day-tab inactive-day" data-day="domingos">DOM/FER</div>
-                        </div>
                     </div>
 
                     <div class="schedule-table" id="scheduleTable">
@@ -278,6 +296,7 @@
     
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/theme.js"></script>
     <script src="js/favorites.js"></script>
     <script src="js/modal.js"></script>
     <script>
@@ -307,7 +326,6 @@
                 sidebar: document.getElementById('sidebar'),
                 sidebarOverlay: document.getElementById('sidebarOverlay'),
                 filterTags: document.querySelectorAll('#filterTags .filter-tag'),
-                dayTabs: document.querySelectorAll('#dayTabs .day-tab'),
                 pointsGrid: document.getElementById('pointsGrid'),
                 pageSubtitle: document.getElementById('pageSubtitle'),
                 selectedPointName: document.getElementById('selectedPointName'),
@@ -331,8 +349,34 @@
                 applyInitialFilter();
                 bindEvents();
                 applyInitialFilter();
+                setupBackToTop();
+                setupOfflineDetection();
+
+                var cached = loadCache();
+                var modalInited = false;
+                function initModalOnce() {
+                    if (modalInited) return;
+                    modalInited = true;
+                    Modal.init({
+                      onFavToggle: function () {
+                        render();
+                        document.querySelectorAll('.fav-btn').forEach(function (btn) {
+                          var id = btn.getAttribute('data-id');
+                          if (id) btn.classList.toggle('favorited', Favorites.isFavorite(id));
+                        });
+                      }
+                    });
+                }
 
                 try {
+                    if (cached) {
+                        state.pontos = cached.pontos;
+                        state.linhas = cached.linhas;
+                        state.horarios = cached.horarios;
+                        initModalOnce();
+                        hideSplash();
+                    }
+
                     var responses = await Promise.all([
                         fetch('./dados/pontos.json'),
                         fetch('./dados/linhas.json'),
@@ -348,33 +392,87 @@
                     state.linhas = data[1];
                     state.horarios = data[2];
 
-                    Modal.init({
-                      onFavToggle: function () {
-                        render();
-                        document.querySelectorAll('.fav-btn').forEach(function (btn) {
-                          var id = btn.getAttribute('data-id');
-                          if (id) btn.classList.toggle('favorited', Favorites.isFavorite(id));
-                        });
-                      }
-                    });
+                    saveCache(state.pontos, state.linhas, state.horarios);
+
+                    initModalOnce();
                     initMap();
                     renderMapMarkers();
                     render();
                     requestLocation();
                 } catch (error) {
                     console.error(error);
-                    if (els.pointsGrid) {
-                        els.pointsGrid.innerHTML = '<div class="empty-state">Nao foi possivel carregar os pontos. Abra a pagina por um servidor local para o fetch funcionar.</div>';
+                    if (!cached) {
+                        cached = loadCache();
                     }
-                    if (els.pageSubtitle) els.pageSubtitle.textContent = 'Erro ao carregar os dados dos pontos.';
+                    if (cached) {
+                        state.pontos = cached.pontos;
+                        state.linhas = cached.linhas;
+                        state.horarios = cached.horarios;
+                        initModalOnce();
+                        initMap();
+                        renderMapMarkers();
+                        render();
+                        requestLocation();
+                    } else {
+                        if (els.pointsGrid) {
+                            els.pointsGrid.innerHTML = '<div class="empty-state">Nao foi possivel carregar os pontos. Abra a pagina por um servidor local para o fetch funcionar.</div>';
+                        }
+                        if (els.pageSubtitle) els.pageSubtitle.textContent = 'Erro ao carregar os dados dos pontos.';
+                    }
                 }
+                hideSplash();
+            }
+
+            function loadCache() {
+                try {
+                    var data = localStorage.getItem('busCache');
+                    return data ? JSON.parse(data) : null;
+                } catch (e) { return null; }
+            }
+
+            function saveCache(pontos, linhas, horarios) {
+                try {
+                    localStorage.setItem('busCache', JSON.stringify({ pontos: pontos, linhas: linhas, horarios: horarios }));
+                } catch (e) {}
+            }
+
+            function hideSplash() {
+                setTimeout(function () {
+                    var el = document.getElementById('splash');
+                    if (el) el.classList.add('hide');
+                }, 500);
+            }
+
+            function setupBackToTop() {
+                var btn = document.getElementById('backToTop');
+                if (!btn) return;
+                window.addEventListener('scroll', function () {
+                    btn.classList.toggle('show', window.scrollY > 300);
+                });
+                btn.addEventListener('click', function () {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            }
+
+            function setupOfflineDetection() {
+                function toggleBanner(offline) {
+                    var banner = document.getElementById('offlineBanner');
+                    if (banner) banner.style.display = offline ? 'block' : 'none';
+                }
+                window.addEventListener('online', function () { toggleBanner(false); });
+                window.addEventListener('offline', function () { toggleBanner(true); });
+                toggleBanner(!navigator.onLine);
             }
 
             function bindEvents() {
                 if (els.searchInput) {
+                    var searchTimer;
                     els.searchInput.addEventListener('input', function () {
-                        render();
-                        renderSearchSuggestions();
+                        clearTimeout(searchTimer);
+                        searchTimer = setTimeout(function () {
+                            render();
+                            renderSearchSuggestions();
+                        }, 200);
                     });
                     els.searchInput.addEventListener('focus', renderSearchSuggestions);
                 }
@@ -431,17 +529,6 @@
                     });
                 });
 
-                els.dayTabs.forEach(function (tab) {
-                    tab.addEventListener('click', function () {
-                        state.selectedDay = tab.dataset.day || 'uteis';
-                        setActiveDay(state.selectedDay);
-                        if (state.selectedPointId) {
-                            var ponto = state.pontos.find(function (item) { return item.id === state.selectedPointId; });
-                            if (ponto) renderSchedule(ponto.linhaId, getNextDeparture(ponto.linhaId).time);
-                        }
-                    });
-                });
-
                 if (els.pointsGrid) {
                     els.pointsGrid.addEventListener('click', function (event) {
                         var favBtn = event.target.closest('.fav-btn');
@@ -494,7 +581,6 @@
                 }
                 setActiveFilter(state.selectedFilter);
                 syncLineSelect();
-                setActiveDay(state.selectedDay);
             }
 
             function updateUrlFilter() {
@@ -550,14 +636,14 @@
                 if (!els.searchResults || !els.searchInput) return;
                 var term = normalize(els.searchInput.value);
                 if (!term) {
-                    renderSuggestionsList(state.pontos.map(withDistance).slice(0, 5));
+                    renderSuggestionsList(getDiverseSuggestions());
                     return;
                 }
 
                 var results = getFilteredPoints('all').filter(function (ponto) {
                     var linha = getLinha(ponto.linhaId);
                     return normalize([ponto.nome, ponto.endereco, ponto.bairro, linha && linha.nome, linha && linha.titulo].join(' ')).includes(term);
-                }).slice(0, 5);
+                }).slice(0, 10);
 
                 renderSuggestionsList(results);
             }
@@ -780,6 +866,24 @@
                 }, 100);
             }
 
+            function createLineMarker(lat, lng, linha) {
+                var cor = linha && linha.cor ? linha.cor : '#888';
+                var svg = [
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="36" viewBox="0 0 24 36">',
+                    '<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24c0-6.6-5.4-12-12-12z" fill="' + cor + '"/>',
+                    '<circle cx="12" cy="12" r="4.5" fill="#fff"/>',
+                    '</svg>'
+                ].join('');
+                return L.marker([lat, lng], {
+                    icon: L.icon({
+                        iconUrl: 'data:image/svg+xml,' + encodeURIComponent(svg),
+                        iconSize: [24, 36],
+                        iconAnchor: [12, 36],
+                        popupAnchor: [0, -36]
+                    })
+                });
+            }
+
             function renderMapMarkers() {
                 if (!state.map || !state.markerLayer) return;
 
@@ -788,7 +892,7 @@
 
                 state.pontos.filter(hasCoords).forEach(function (ponto) {
                     var linha = getLinha(ponto.linhaId);
-                    var marker = L.marker([Number(ponto.lat), Number(ponto.lng)])
+                    var marker = createLineMarker(Number(ponto.lat), Number(ponto.lng), linha)
                         .bindPopup(
                             '<strong>' + escapeHtml(ponto.nome) + '</strong><br>' +
                             escapeHtml(ponto.endereco) + '<br>' +
@@ -920,6 +1024,26 @@
                 return lista;
             }
 
+            function getDiverseSuggestions() {
+                var lista = state.pontos.map(withDistance);
+                var seenBairros = {};
+                var seenLinhas = {};
+                var result = [];
+                for (var i = 0; i < lista.length; i++) {
+                    if (result.length >= 10) break;
+                    var ponto = lista[i];
+                    var linha = getLinha(ponto.linhaId);
+                    var bairroKey = normalize(ponto.bairro);
+                    var linhaKey = linha ? linha.id : 0;
+                    if (!seenBairros[bairroKey] || !seenLinhas[linhaKey]) {
+                        result.push(ponto);
+                        seenBairros[bairroKey] = true;
+                        seenLinhas[linhaKey] = true;
+                    }
+                }
+                return result.slice(0, 10);
+            }
+
             function withDistance(ponto) {
                 if (!state.userPosition || !hasCoords(ponto)) return Object.assign({}, ponto);
                 return Object.assign({}, ponto, {
@@ -949,13 +1073,6 @@
             function syncLineSelect() {
                 var select = document.getElementById('lineSelect');
                 if (select) select.value = state.selectedFilter;
-            }
-
-            function setActiveDay(day) {
-                els.dayTabs.forEach(function (tab) {
-                    var active = (tab.dataset.day || 'uteis') === day;
-                    tab.className = 'day-tab ' + (active ? 'active-day' : 'inactive-day');
-                });
             }
 
             function markSelectedCard() {

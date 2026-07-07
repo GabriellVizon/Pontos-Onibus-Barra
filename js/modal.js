@@ -18,7 +18,7 @@
     modalEl.className = 'modal-overlay';
     modalEl.innerHTML =
       '<div class="modal-backdrop"></div>' +
-      '<div class="modal-container" role="dialog" aria-modal="true">' +
+      '<div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="modalTitle">' +
         '<div class="modal-header">' +
           '<h2 class="modal-title" id="modalTitle"></h2>' +
           '<div class="modal-header-actions">' +
@@ -55,7 +55,28 @@
   }
 
   function onKeyDown(e) {
-    if (e.key === 'Escape' && isOpen()) close();
+    if (e.key === 'Escape' && isOpen()) { close(); return; }
+    if (e.key === 'Tab' && isOpen()) trapFocus(e);
+  }
+
+  function trapFocus(e) {
+    var focusable = modalEl.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable.length === 0) return;
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
   }
 
   function isOpen() {
@@ -74,6 +95,8 @@
     requestAnimationFrame(function () {
       modalEl.classList.add('open');
       document.body.classList.add('modal-open');
+      var closeBtn = modalEl.querySelector('#modalCloseBtn');
+      if (closeBtn) closeBtn.focus();
     });
 
     setTimeout(function () {

@@ -41,9 +41,14 @@ async function init() {
   initMap();
 
   setupSearch();
+  setupBackToTop();
+  setupOfflineDetection();
 
-  try {
-    await carregarDados();
+  var cached = loadCache();
+  var modalInited = false;
+  function initModalOnce() {
+    if (modalInited) return;
+    modalInited = true;
     Modal.init({
       onFavToggle: function () {
         renderFavoriteStops();
@@ -53,12 +58,70 @@ async function init() {
         });
       }
     });
+  }
+
+  try {
+    if (cached) {
+      state.pontos = cached.pontos;
+      state.linhas = cached.linhas;
+      state.horarios = cached.horarios;
+      initModalOnce();
+      renderAll();
+      hideSplash();
+    }
+    await carregarDados();
+    saveCache(state.pontos, state.linhas, state.horarios);
+    initModalOnce();
     renderAll();
     requestUserLocation();
   } catch (error) {
     console.error(error);
-    showEmpty(els.nearbyStops, 'Não foi possível carregar os dados dos pontos.');
+    if (!cached) {
+      showEmpty(els.nearbyStops, 'Não foi possível carregar os dados dos pontos.');
+    }
   }
+  hideSplash();
+}
+
+function loadCache() {
+  try {
+    var data = localStorage.getItem('busCache');
+    return data ? JSON.parse(data) : null;
+  } catch (e) { return null; }
+}
+
+function saveCache(pontos, linhas, horarios) {
+  try {
+    localStorage.setItem('busCache', JSON.stringify({ pontos: pontos, linhas: linhas, horarios: horarios }));
+  } catch (e) {}
+}
+
+function hideSplash() {
+  setTimeout(function () {
+    var el = document.getElementById('splash');
+    if (el) el.classList.add('hide');
+  }, 500);
+}
+
+function setupBackToTop() {
+  var btn = document.getElementById('backToTop');
+  if (!btn) return;
+  window.addEventListener('scroll', function () {
+    btn.classList.toggle('show', window.scrollY > 300);
+  });
+  btn.addEventListener('click', function () {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+}
+
+function setupOfflineDetection() {
+  function toggleBanner(offline) {
+    var banner = document.getElementById('offlineBanner');
+    if (banner) banner.style.display = offline ? 'block' : 'none';
+  }
+  window.addEventListener('online', function () { toggleBanner(false); });
+  window.addEventListener('offline', function () { toggleBanner(true); });
+  toggleBanner(!navigator.onLine);
 }
 
 async function carregarDados() {
@@ -200,7 +263,7 @@ function setupSearch() {
       if (term) {
         renderSearchSuggestions(getSearchSuggestions(term));
       } else {
-        renderSearchSuggestions(pontosComDistancia().slice(0, 5));
+        renderSearchSuggestions(getDiverseSuggestions());
       }
     }, 200);
   });
@@ -232,7 +295,28 @@ function getSearchSuggestions(term) {
         linha?.titulo || '',
       ].join(' ')).includes(term);
     })
-    .slice(0, 5);
+    .slice(0, 10);
+}
+
+function getDiverseSuggestions() {
+  const lista = pontosComDistancia();
+  const seenBairros = new Set();
+  const seenLinhas = new Set();
+  const result = [];
+  for (const ponto of lista) {
+    if (result.length >= 10) break;
+    const linha = getLinha(ponto.linhaId);
+    const bairroKey = normalize(ponto.bairro);
+    const linhaKey = linha ? linha.id : 0;
+    const isNewBairro = !seenBairros.has(bairroKey);
+    const isNewLinha = !seenLinhas.has(linhaKey);
+    if (isNewBairro || isNewLinha) {
+      result.push(ponto);
+      seenBairros.add(bairroKey);
+      seenLinhas.add(linhaKey);
+    }
+  }
+  return result.slice(0, 10);
 }
 
 function renderSearchSuggestions(results) {
@@ -467,6 +551,24 @@ function initMap() {
   state.markerLayer = L.layerGroup().addTo(state.map);
 }
 
+function createLineMarker(lat, lng, linha) {
+  const cor = linha && linha.cor ? linha.cor : '#888';
+  const svg = [
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="36" viewBox="0 0 24 36">',
+    '<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24c0-6.6-5.4-12-12-12z" fill="' + cor + '"/>',
+    '<circle cx="12" cy="12" r="4.5" fill="#fff"/>',
+    '</svg>'
+  ].join('');
+  return L.marker([lat, lng], {
+    icon: L.icon({
+      iconUrl: 'data:image/svg+xml,' + encodeURIComponent(svg),
+      iconSize: [24, 36],
+      iconAnchor: [12, 36],
+      popupAnchor: [0, -36]
+    })
+  });
+}
+
 function renderMapMarkers() {
   if (!state.map || !state.markerLayer) return;
 
@@ -476,7 +578,7 @@ function renderMapMarkers() {
   const pontosComGps = state.pontos.filter(hasCoords);
   pontosComGps.forEach((ponto) => {
     const linha = getLinha(ponto.linhaId);
-    const marker = L.marker([ponto.lat, ponto.lng])
+    const marker = createLineMarker(ponto.lat, ponto.lng, linha)
       .bindPopup(`
         <strong>${escapeHtml(ponto.nome)}</strong>
         ${escapeHtml(ponto.endereco)}<br>
