@@ -1,3 +1,14 @@
+function cardClickEffect(card, callback) {
+  card.style.transition = 'transform 0.12s cubic-bezier(0.4, 0, 0.2, 1)';
+  card.style.transform = 'scale(0.98)';
+  requestAnimationFrame(function () {
+    setTimeout(function () {
+      card.style.transform = '';
+      callback();
+    }, 120);
+  });
+}
+
 const BARRA_BONITA_CENTER = [-22.4946, -48.5588];
 
 const state = {
@@ -229,7 +240,9 @@ function setupInteractions() {
     }
 
     if (stopCard && !event.target.closest('a')) {
-      openStopModal(Number(stopCard.dataset.stopId));
+      cardClickEffect(stopCard, function () {
+        openStopModal(Number(stopCard.dataset.stopId));
+      });
     }
   });
 }
@@ -469,6 +482,8 @@ function renderStopCard(ponto, options = {}) {
   const linha = getLinha(ponto.linhaId);
   const next = getNextDeparture(ponto.linhaId);
   const horariosLinha = getHorario(ponto.linhaId);
+  const lineColors = getPointLineColors(ponto);
+  const dotBackground = getMixedBackground(lineColors);
   const distanceText = typeof ponto.distancia === 'number'
     ? formatDistance(ponto.distancia)
     : hasCoords(ponto)
@@ -480,6 +495,7 @@ function renderStopCard(ponto, options = {}) {
     ? `https://www.google.com/maps/dir/?api=1&destination=${ponto.lat},${ponto.lng}`
     : '';
   const isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
+  const nextClass = next.minutes <= 5 ? 'now' : 'waiting';
 
   return `
     <div class="card stop-card ${selected}" data-stop-id="${ponto.id}">
@@ -496,20 +512,20 @@ function renderStopCard(ponto, options = {}) {
       </div>
       <h3 class="card-title">${escapeHtml(ponto.nome)}</h3>
       <p class="card-address">${escapeHtml(ponto.endereco)}</p>
+      <div class="card-next-bus">
+        <span class="card-next-label"><i class="ti ti-bus"></i> Próximo ônibus</span>
+        <span class="card-next-time ${nextClass}">${escapeHtml(next.label)}</span>
+      </div>
       <div class="card-meta">
         <span class="meta-chip">${escapeHtml(ponto.bairro)}</span>
-        <span class="meta-chip">${escapeHtml(linha?.nome || 'Linha não informada')}</span>
+        <span class="meta-chip line-meta-chip"><span class="chip-dot" style="background:${escapeAttr(dotBackground)}"></span>${escapeHtml(linha?.nome || 'Linha não informada')}</span>
         <span class="meta-chip">Ordem ${escapeHtml(String(ponto.ordem))}</span>
-      </div>
-      <div class="card-line">
-        <span class="card-line-name">Próxima saída</span>
-        <span class="card-line-time ${next.minutes <= 5 ? 'now' : 'waiting'}">${escapeHtml(next.label)}</span>
       </div>
       <div class="card-line">
         <span class="card-line-name">${escapeHtml(linha?.titulo || 'Rota não informada')}</span>
         <span class="card-line-time waiting">${horariosLinha.length} horários</span>
       </div>
-      <div class="line-card-times stop-times">
+      <div class="card-horarios">
         ${horariosLinha
           .map((horario) => `
             <span class="time-chip ${horario === next.time ? 'active' : 'inactive'}">${escapeHtml(horario)}</span>
@@ -517,12 +533,12 @@ function renderStopCard(ponto, options = {}) {
           .join('')}
       </div>
       <div class="card-actions">
-        <button class="card-action primary" type="button" data-action="focus-map" ${mapDisabled}>
-          <i class="ti ti-map"></i> Mapa
+        <button class="card-action" type="button" data-action="focus-map" ${mapDisabled}>
+          <i class="ti ti-map"></i> Ver mapa
         </button>
         ${routeUrl
           ? `<a class="card-action" href="${routeUrl}" target="_blank" rel="noopener">
-              <i class="ti ti-route"></i> Rota
+              <i class="ti ti-route"></i> Traçar rota
             </a>`
           : `<button class="card-action" type="button" disabled>
               <i class="ti ti-route-off"></i> Sem rota
@@ -551,11 +567,24 @@ function initMap() {
   state.markerLayer = L.layerGroup().addTo(state.map);
 }
 
-function createLineMarker(lat, lng, linha) {
-  const cor = linha && linha.cor ? linha.cor : '#888';
+function createLineMarker(lat, lng, linha, lineColors) {
+  const colors = lineColors && lineColors.length ? lineColors : [linha && linha.cor ? linha.cor : '#888'];
+  const fill = colors.length === 1 ? colors[0] : 'url(#pinGradient)';
+  const defs = colors.length === 1
+    ? ''
+    : [
+        '<defs><linearGradient id="pinGradient" x1="0%" y1="0%" x2="100%" y2="0%">',
+        colors.map((color, index) => {
+          const start = (index / colors.length) * 100;
+          const end = ((index + 1) / colors.length) * 100;
+          return '<stop offset="' + start + '%" stop-color="' + color + '"/><stop offset="' + end + '%" stop-color="' + color + '"/>';
+        }).join(''),
+        '</linearGradient></defs>',
+      ].join('');
   const svg = [
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="36" viewBox="0 0 24 36">',
-    '<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24c0-6.6-5.4-12-12-12z" fill="' + cor + '"/>',
+    defs,
+    '<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24c0-6.6-5.4-12-12-12z" fill="' + fill + '"/>',
     '<circle cx="12" cy="12" r="4.5" fill="#fff"/>',
     '</svg>'
   ].join('');
@@ -578,7 +607,7 @@ function renderMapMarkers() {
   const pontosComGps = state.pontos.filter(hasCoords);
   pontosComGps.forEach((ponto) => {
     const linha = getLinha(ponto.linhaId);
-    const marker = createLineMarker(ponto.lat, ponto.lng, linha)
+    const marker = createLineMarker(ponto.lat, ponto.lng, linha, getPointLineColors(ponto))
       .bindPopup(`
         <strong>${escapeHtml(ponto.nome)}</strong>
         ${escapeHtml(ponto.endereco)}<br>
@@ -682,6 +711,7 @@ function openStopModal(stopId) {
   const linha = getLinha(ponto.linhaId);
   const next = getNextDeparture(ponto.linhaId);
   const horarios = getHorario(ponto.linhaId);
+  const sharedLineItems = getPointLineItems(ponto);
   const isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
 
   let distancia = null;
@@ -696,6 +726,8 @@ function openStopModal(stopId) {
   Modal.open({
     ponto: ponto,
     linha: linha,
+    sharedLineItems: sharedLineItems,
+    lineColors: getPointLineColors(ponto),
     next: next,
     horarios: horarios,
     distancia: distancia,
@@ -836,6 +868,65 @@ function showEmpty(container, message) {
 
 function getLinha(linhaId) {
   return state.linhas.find((linha) => linha.id === linhaId);
+}
+
+function getPointLineColors(ponto) {
+  const colors = [];
+  const seen = new Set();
+
+  getPointLineItems(ponto).forEach((item) => {
+    const linha = item.linha;
+    if (!linha?.cor || seen.has(linha.cor)) return;
+    colors.push(linha.cor);
+    seen.add(linha.cor);
+  });
+
+  if (colors.length === 0) {
+    const ownLine = getLinha(ponto.linhaId);
+    if (ownLine?.cor) colors.push(ownLine.cor);
+  }
+
+  return colors.length ? colors : ['#888'];
+}
+
+function getPointLineItems(ponto) {
+  const key = getPointGroupKey(ponto);
+  const seen = new Set();
+  const items = [];
+
+  state.pontos.forEach((item) => {
+    if (getPointGroupKey(item) !== key || seen.has(item.linhaId)) return;
+    const linha = getLinha(item.linhaId);
+    if (!linha) return;
+    items.push({
+      ponto: item,
+      linha: linha,
+      next: getNextDeparture(item.linhaId),
+      horarios: getHorario(item.linhaId),
+    });
+    seen.add(item.linhaId);
+  });
+
+  return items.length ? items : [{
+    ponto: ponto,
+    linha: getLinha(ponto.linhaId),
+    next: getNextDeparture(ponto.linhaId),
+    horarios: getHorario(ponto.linhaId),
+  }];
+}
+
+function getPointGroupKey(ponto) {
+  return normalize([ponto.nome, ponto.endereco].join('|'));
+}
+
+function getMixedBackground(colors) {
+  if (!colors || colors.length === 0) return '#888';
+  if (colors.length === 1) return colors[0];
+  return 'linear-gradient(90deg, ' + colors.map((color, index) => {
+    const start = (index / colors.length) * 100;
+    const end = ((index + 1) / colors.length) * 100;
+    return color + ' ' + start + '% ' + end + '%';
+  }).join(', ') + ')';
 }
 
 function getHorario(linhaId) {

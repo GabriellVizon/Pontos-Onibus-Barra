@@ -300,7 +300,18 @@
     <script src="js/favorites.js"></script>
     <script src="js/modal.js"></script>
     <script>
-        (function () {
+            function cardClickEffect(card, callback) {
+                card.style.transition = 'transform 0.12s cubic-bezier(0.4, 0, 0.2, 1)';
+                card.style.transform = 'scale(0.98)';
+                requestAnimationFrame(function () {
+                    setTimeout(function () {
+                        card.style.transform = '';
+                        callback();
+                    }, 120);
+                });
+            }
+
+            (function () {
 
             var state = {
                 pontos: [],
@@ -544,7 +555,9 @@
                         }
                         var card = event.target.closest('[data-point-id]');
                         if (!card) return;
-                        openPointModal(Number(card.dataset.pointId));
+                        cardClickEffect(card, function () {
+                            openPointModal(Number(card.dataset.pointId));
+                        });
                     });
                 }
 
@@ -734,23 +747,33 @@
 
             function renderPointCard(ponto) {
                 var linha = getLinha(ponto.linhaId);
+                var next = getNextDeparture(ponto.linhaId);
+                var horariosLinha = getHorario(ponto.linhaId);
                 var selected = ponto.id === state.selectedPointId ? ' selected' : '';
                 var isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
+                var lineColors = getPointLineColors(ponto);
+                var dotBackground = getMixedBackground(lineColors);
+                var nextClass = next.minutes <= 5 ? 'now' : 'waiting';
+                var distancia = getDistanceText(ponto);
                 return [
                     '<div class="point-card' + selected + '" data-point-id="' + ponto.id + '">',
                     '<div class="point-card-header">',
                     '<h3 class="point-card-title">' + escapeHtml(ponto.nome) + '</h3>',
                     '<div class="card-header-right">',
-                    '<span class="point-distance">' + escapeHtml(getDistanceText(ponto)) + '</span>',
+                    '<span class="point-distance">' + escapeHtml(distancia) + '</span>',
                     '<button class="fav-btn' + (isFav ? ' favorited' : '') + '" data-id="' + ponto.id + '" aria-label="Favoritar">',
                     '<i class="ti ti-heart"></i>',
                     '</button>',
                     '</div>',
                     '</div>',
                     '<p class="point-address">' + escapeHtml(ponto.endereco) + '</p>',
+                    '<div class="point-next-bus">',
+                    '<span class="point-next-label"><i class="ti ti-bus"></i> Proximo onibus</span>',
+                    '<span class="point-next-time ' + nextClass + '">' + escapeHtml(next.label) + '</span>',
+                    '</div>',
                     '<div class="point-meta">',
                     '<span class="point-chip">' + escapeHtml(ponto.bairro) + '</span>',
-                    '<span class="point-chip">' + escapeHtml(linha ? linha.nome : 'Linha') + '</span>',
+                    '<span class="point-chip point-line-chip"><span class="chip-dot" style="background:' + escapeAttr(dotBackground) + '"></span>' + escapeHtml(linha ? linha.nome : 'Linha') + '</span>',
                     '<span class="point-chip">Ordem ' + escapeHtml(ponto.ordem) + '</span>',
                     '</div>',
                     '</div>'
@@ -766,11 +789,19 @@
                     '<span class="stops-title">' + (state.userPosition ? 'Mais proximos' : 'Primeiros pontos') + '</span>',
                     '<span class="stops-count">' + state.pontos.length + ' CADASTRADOS</span>',
                     '</div>',
+                    '<div class="line-legend">',
+                    state.linhas.map(function (linha) {
+                        return '<span class="line-legend-item"><span class="line-legend-icon" style="background:' + escapeAttr(linha.cor || '#888') + '"><i class="ti ti-route"></i></span>' + escapeHtml(linha.nome) + '</span>';
+                    }).join(''),
+                    '</div>',
                     list.map(function (ponto, index) {
+                        var lineColors = getPointLineColors(ponto);
+                        var dotBackground = getMixedBackground(lineColors);
+                        var shadowColor = hexToRgba(lineColors[0] || '#e53935', 0.32);
                         return [
                             '<div class="stop-item" data-point-id="' + ponto.id + '">',
                             '<div class="stop-line-col">',
-                            '<div class="stop-dot ' + (index === 0 ? 'pulse-dot' : 'gray-dot') + '"></div>',
+                            '<div class="stop-dot colored-dot" style="background:' + escapeAttr(dotBackground) + (index === 0 ? '; box-shadow:0 0 0 4px ' + escapeAttr(shadowColor) : '') + '"></div>',
                             index < list.length - 1 ? '<div class="stop-line"></div>' : '',
                             '</div>',
                             '<div class="stop-info">',
@@ -790,6 +821,7 @@
                 var linha = getLinha(ponto.linhaId);
                 var next = getNextDeparture(ponto.linhaId);
                 var horarios = getHorario(ponto.linhaId);
+                var sharedLineItems = getPointLineItems(ponto);
                 var isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
 
                 var distancia = null;
@@ -804,6 +836,8 @@
                 Modal.open({
                     ponto: ponto,
                     linha: linha,
+                    sharedLineItems: sharedLineItems,
+                    lineColors: getPointLineColors(ponto),
                     next: next,
                     horarios: horarios,
                     distancia: distancia,
@@ -866,11 +900,22 @@
                 }, 100);
             }
 
-            function createLineMarker(lat, lng, linha) {
-                var cor = linha && linha.cor ? linha.cor : '#888';
+            function createLineMarker(lat, lng, linha, lineColors) {
+                var colors = lineColors && lineColors.length ? lineColors : [linha && linha.cor ? linha.cor : '#888'];
+                var fill = colors.length === 1 ? colors[0] : 'url(#pinGradient)';
+                var defs = colors.length === 1 ? '' : [
+                    '<defs><linearGradient id="pinGradient" x1="0%" y1="0%" x2="100%" y2="0%">',
+                    colors.map(function (color, index) {
+                        var start = (index / colors.length) * 100;
+                        var end = ((index + 1) / colors.length) * 100;
+                        return '<stop offset="' + start + '%" stop-color="' + color + '"/><stop offset="' + end + '%" stop-color="' + color + '"/>';
+                    }).join(''),
+                    '</linearGradient></defs>'
+                ].join('');
                 var svg = [
                     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="36" viewBox="0 0 24 36">',
-                    '<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24c0-6.6-5.4-12-12-12z" fill="' + cor + '"/>',
+                    defs,
+                    '<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24c0-6.6-5.4-12-12-12z" fill="' + fill + '"/>',
                     '<circle cx="12" cy="12" r="4.5" fill="#fff"/>',
                     '</svg>'
                 ].join('');
@@ -892,7 +937,7 @@
 
                 state.pontos.filter(hasCoords).forEach(function (ponto) {
                     var linha = getLinha(ponto.linhaId);
-                    var marker = createLineMarker(Number(ponto.lat), Number(ponto.lng), linha)
+                    var marker = createLineMarker(Number(ponto.lat), Number(ponto.lng), linha, getPointLineColors(ponto))
                         .bindPopup(
                             '<strong>' + escapeHtml(ponto.nome) + '</strong><br>' +
                             escapeHtml(ponto.endereco) + '<br>' +
@@ -1085,6 +1130,78 @@
                 return state.linhas.find(function (linha) { return linha.id === linhaId; });
             }
 
+            function getPointLineColors(ponto) {
+                var colors = [];
+                var seen = {};
+
+                getPointLineItems(ponto).forEach(function (item) {
+                    var linha = item.linha;
+                    if (!linha || !linha.cor || seen[linha.cor]) return;
+                    colors.push(linha.cor);
+                    seen[linha.cor] = true;
+                });
+
+                if (colors.length === 0) {
+                    var ownLine = getLinha(ponto.linhaId);
+                    if (ownLine && ownLine.cor) colors.push(ownLine.cor);
+                }
+
+                return colors.length ? colors : ['#888'];
+            }
+
+            function getPointLineItems(ponto) {
+                var key = getPointGroupKey(ponto);
+                var seen = {};
+                var items = [];
+
+                state.pontos.forEach(function (item) {
+                    if (getPointGroupKey(item) !== key || seen[item.linhaId]) return;
+                    var linha = getLinha(item.linhaId);
+                    if (!linha) return;
+                    items.push({
+                        ponto: item,
+                        linha: linha,
+                        next: getNextDeparture(item.linhaId),
+                        horarios: getHorario(item.linhaId)
+                    });
+                    seen[item.linhaId] = true;
+                });
+
+                return items.length ? items : [{
+                    ponto: ponto,
+                    linha: getLinha(ponto.linhaId),
+                    next: getNextDeparture(ponto.linhaId),
+                    horarios: getHorario(ponto.linhaId)
+                }];
+            }
+
+            function getPointGroupKey(ponto) {
+                return normalize([ponto.nome, ponto.endereco].join('|'));
+            }
+
+            function getMixedBackground(colors) {
+                if (!colors || colors.length === 0) return '#888';
+                if (colors.length === 1) return colors[0];
+                return 'linear-gradient(90deg, ' + colors.map(function (color, index) {
+                    var start = (index / colors.length) * 100;
+                    var end = ((index + 1) / colors.length) * 100;
+                    return color + ' ' + start + '% ' + end + '%';
+                }).join(', ') + ')';
+            }
+
+            function hexToRgba(hex, alpha) {
+                var clean = String(hex || '').replace('#', '');
+                if (clean.length === 3) {
+                    clean = clean.split('').map(function (char) { return char + char; }).join('');
+                }
+                var value = parseInt(clean, 16);
+                if (!Number.isFinite(value)) return 'rgba(229, 57, 53, ' + alpha + ')';
+                var r = (value >> 16) & 255;
+                var g = (value >> 8) & 255;
+                var b = value & 255;
+                return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
+            }
+
             function getHorario(linhaId, day) {
                 var item = state.horarios.find(function (horario) { return horario.linhaId === linhaId; });
                 if (!item) return [];
@@ -1153,6 +1270,10 @@
                     .replaceAll('>', '&gt;')
                     .replaceAll('"', '&quot;')
                     .replaceAll("'", '&#039;');
+            }
+
+            function escapeAttr(value) {
+                return escapeHtml(value).replaceAll('`', '&#096;');
             }
         })();
     </script>
