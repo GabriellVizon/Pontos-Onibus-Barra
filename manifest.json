@@ -1,0 +1,15 @@
+{
+  "name": "BarraBus - Transporte Público em Barra Bonita",
+  "short_name": "BarraBus",
+  "description": "Pontos, linhas e horários de ônibus em Barra Bonita, SP",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#0d0d0d",
+  "theme_color": "#e53935",
+  "orientation": "any",
+  "categories": ["transportation", "navigation"],
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -54,22 +54,39 @@
     document.addEventListener('keydown', onKeyDown);
 
     var favBtn = modalEl.querySelector('#modalFavBtn');
-    favBtn.addEventListener('click', function () {
+    favBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
       var id = this.getAttribute('data-id');
       if (!id) return;
       Favorites.toggleFavorite(id);
       var isFav = Favorites.isFavorite(id);
       this.classList.toggle('favorited', isFav);
+      var icon = this.querySelector('i');
+      if (icon) {
+        icon.classList.remove('ti-heart', 'ti-heart-filled');
+        icon.classList.add(isFav ? 'ti-heart-filled' : 'ti-heart');
+      }
+      this.classList.remove('fill', 'empty');
+      void this.offsetWidth;
+      this.classList.add(isFav ? 'fill' : 'empty');
       if (onFavToggleCallback) onFavToggleCallback(id);
     });
 
     var tabBtns = modalEl.querySelectorAll('.modal-tab-btn');
+    var tabContent = modalEl.querySelector('#modalTabContent');
     for (var i = 0; i < tabBtns.length; i++) {
       tabBtns[i].addEventListener('click', function () {
+        var newTab = this.getAttribute('data-tab');
+        if (newTab === currentTab) return;
         for (var j = 0; j < tabBtns.length; j++) tabBtns[j].classList.remove('active');
         this.classList.add('active');
-        currentTab = this.getAttribute('data-tab');
-        if (currentData) renderTabContent(currentData, currentTab);
+        currentTab = newTab;
+        if (!currentData) return;
+        tabContent.style.opacity = '0';
+        setTimeout(function () {
+          renderTabContent(currentData, currentTab);
+          tabContent.style.opacity = '1';
+        }, 200);
       });
     }
   }
@@ -130,21 +147,6 @@
     if (onCloseCallback) onCloseCallback();
   }
 
-  function escapeHtml(value) {
-    return String(value == null ? '' : value)
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;');
-  }
-
-  function formatDistance(d) {
-    if (d == null) return null;
-    if (d < 1) return Math.round(d * 1000) + 'm';
-    return d.toFixed(1).replace('.', ',') + 'km';
-  }
-
   function getSharedLineItems(data) {
     if (data.sharedLineItems && data.sharedLineItems.length) return data.sharedLineItems;
     if (!data.linha) return [];
@@ -165,6 +167,12 @@
     var favBtn = modalEl.querySelector('#modalFavBtn');
     favBtn.setAttribute('data-id', data.ponto.id);
     favBtn.classList.toggle('favorited', !!data.isFav);
+    var icon = favBtn.querySelector('i');
+    if (icon) {
+      icon.classList.remove('ti-heart', 'ti-heart-filled');
+      icon.classList.add(data.isFav ? 'ti-heart-filled' : 'ti-heart');
+    }
+    favBtn.classList.remove('fill', 'empty');
   }
 
   function renderNextBus(data) {

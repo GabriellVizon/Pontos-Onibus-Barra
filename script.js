@@ -1,14 +1,3 @@
-function cardClickEffect(card, callback) {
-  card.style.transition = 'transform 0.12s cubic-bezier(0.4, 0, 0.2, 1)';
-  card.style.transform = 'scale(0.98)';
-  requestAnimationFrame(function () {
-    setTimeout(function () {
-      card.style.transform = '';
-      callback();
-    }, 120);
-  });
-}
-
 const BARRA_BONITA_CENTER = [-22.4946, -48.5588];
 
 const state = {
@@ -65,7 +54,14 @@ async function init() {
         renderFavoriteStops();
         document.querySelectorAll('.fav-btn').forEach(function (btn) {
           var id = btn.getAttribute('data-id');
-          if (id) btn.classList.toggle('favorited', Favorites.isFavorite(id));
+          if (!id) return;
+          var isFav = Favorites.isFavorite(id);
+          btn.classList.toggle('favorited', isFav);
+          var icon = btn.querySelector('i');
+          if (icon) {
+            icon.classList.remove('ti-heart', 'ti-heart-filled');
+            icon.classList.add(isFav ? 'ti-heart-filled' : 'ti-heart');
+          }
         });
       }
     });
@@ -92,47 +88,6 @@ async function init() {
     }
   }
   hideSplash();
-}
-
-function loadCache() {
-  try {
-    var data = localStorage.getItem('busCache');
-    return data ? JSON.parse(data) : null;
-  } catch (e) { return null; }
-}
-
-function saveCache(pontos, linhas, horarios) {
-  try {
-    localStorage.setItem('busCache', JSON.stringify({ pontos: pontos, linhas: linhas, horarios: horarios }));
-  } catch (e) {}
-}
-
-function hideSplash() {
-  setTimeout(function () {
-    var el = document.getElementById('splash');
-    if (el) el.classList.add('hide');
-  }, 500);
-}
-
-function setupBackToTop() {
-  var btn = document.getElementById('backToTop');
-  if (!btn) return;
-  window.addEventListener('scroll', function () {
-    btn.classList.toggle('show', window.scrollY > 300);
-  });
-  btn.addEventListener('click', function () {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-}
-
-function setupOfflineDetection() {
-  function toggleBanner(offline) {
-    var banner = document.getElementById('offlineBanner');
-    if (banner) banner.style.display = offline ? 'block' : 'none';
-  }
-  window.addEventListener('online', function () { toggleBanner(false); });
-  window.addEventListener('offline', function () { toggleBanner(true); });
-  toggleBanner(!navigator.onLine);
 }
 
 async function carregarDados() {
@@ -231,11 +186,29 @@ function setupInteractions() {
       event.stopPropagation();
       const id = favBtn.dataset.id;
       Favorites.toggleFavorite(id);
-      favBtn.classList.toggle('favorited');
-      favBtn.classList.remove('beat');
+      const isFav = Favorites.isFavorite(id);
+      favBtn.classList.toggle('favorited', isFav);
+      const icon = favBtn.querySelector('i');
+      if (icon) {
+        icon.classList.remove('ti-heart', 'ti-heart-filled');
+        icon.classList.add(isFav ? 'ti-heart-filled' : 'ti-heart');
+      }
+      favBtn.classList.remove('fill', 'empty');
       void favBtn.offsetWidth;
-      favBtn.classList.add('beat');
+      favBtn.classList.add(isFav ? 'fill' : 'empty');
       renderFavoriteStops();
+      document.querySelectorAll('.fav-btn').forEach(function (btn) {
+        if (btn === favBtn) return;
+        var bid = btn.getAttribute('data-id');
+        if (!bid) return;
+        var bFav = Favorites.isFavorite(bid);
+        btn.classList.toggle('favorited', bFav);
+        var bIcon = btn.querySelector('i');
+        if (bIcon) {
+          bIcon.classList.remove('ti-heart', 'ti-heart-filled');
+          bIcon.classList.add(bFav ? 'ti-heart-filled' : 'ti-heart');
+        }
+      });
       return;
     }
 
@@ -296,10 +269,10 @@ function setupSearch() {
 }
 
 function getSearchSuggestions(term) {
-  const lista = pontosComDistancia();
+  const lista = pontosComDistancia(state.pontos, state.userPosition);
   return lista
     .filter((ponto) => {
-      const linha = getLinha(ponto.linhaId);
+      const linha = getLinha(ponto.linhaId, state.linhas);
       return normalize([
         ponto.nome,
         ponto.endereco,
@@ -312,13 +285,13 @@ function getSearchSuggestions(term) {
 }
 
 function getDiverseSuggestions() {
-  const lista = pontosComDistancia();
+  const lista = pontosComDistancia(state.pontos, state.userPosition);
   const seenBairros = new Set();
   const seenLinhas = new Set();
   const result = [];
   for (const ponto of lista) {
     if (result.length >= 10) break;
-    const linha = getLinha(ponto.linhaId);
+    const linha = getLinha(ponto.linhaId, state.linhas);
     const bairroKey = normalize(ponto.bairro);
     const linhaKey = linha ? linha.id : 0;
     const isNewBairro = !seenBairros.has(bairroKey);
@@ -341,7 +314,7 @@ function renderSearchSuggestions(results) {
 
   els.searchResults.innerHTML = results
     .map((ponto) => {
-      const linha = getLinha(ponto.linhaId);
+      const linha = getLinha(ponto.linhaId, state.linhas);
       const distanceText = typeof ponto.distancia === 'number'
         ? `<span><i class="ti ti-navigation"></i> ${formatDistance(ponto.distancia)}</span>`
         : '';
@@ -392,7 +365,7 @@ function renderFavoriteStops() {
     return;
   }
   if (els.favSubtitle) els.favSubtitle.textContent = 'Seus pontos favoritos.';
-  const lista = state.userPosition ? pontosComDistancia() : state.pontos;
+  const lista = state.userPosition ? pontosComDistancia(state.pontos, state.userPosition) : state.pontos;
   const favPontos = lista.filter(function (p) { return favIds.indexOf(String(p.id)) !== -1; });
   els.favStops.innerHTML = favPontos.map(function (p) { return renderStopCard(p, { compact: true }); }).join('');
 }
@@ -408,7 +381,7 @@ function renderNearbyStops() {
     return;
   }
 
-  const nearby = pontosComDistancia()
+  const nearby = pontosComDistancia(state.pontos, state.userPosition)
     .filter((ponto) => hasCoords(ponto))
     .sort((a, b) => a.distancia - b.distancia)
     .slice(0, 3);
@@ -430,8 +403,8 @@ function renderLines() {
       const pontosLinha = state.pontos
         .filter((ponto) => ponto.linhaId === linha.id)
         .sort((a, b) => a.ordem - b.ordem);
-      const horariosLinha = getHorario(linha.id);
-      const next = getNextDeparture(linha.id);
+      const horariosLinha = getHorario(linha.id, state.horarios, getCurrentDayType());
+      const next = getNextDeparture(linha.id, state.horarios);
       const primeiroPonto = pontosLinha[0]?.nome || 'Ponto inicial não informado';
       const ultimoPonto = pontosLinha[pontosLinha.length - 1]?.nome || 'Ponto final não informado';
 
@@ -479,10 +452,10 @@ function renderLines() {
 }
 
 function renderStopCard(ponto, options = {}) {
-  const linha = getLinha(ponto.linhaId);
-  const next = getNextDeparture(ponto.linhaId);
-  const horariosLinha = getHorario(ponto.linhaId);
-  const lineColors = getPointLineColors(ponto);
+  const linha = getLinha(ponto.linhaId, state.linhas);
+  const next = getNextDeparture(ponto.linhaId, state.horarios);
+  const horariosLinha = getHorario(ponto.linhaId, state.horarios, getCurrentDayType());
+  const lineColors = getPointLineColors(ponto, state.pontos, state.linhas);
   const dotBackground = getMixedBackground(lineColors);
   const distanceText = typeof ponto.distancia === 'number'
     ? formatDistance(ponto.distancia)
@@ -506,7 +479,7 @@ function renderStopCard(ponto, options = {}) {
         <div class="card-header-right">
           <span class="card-distance">${escapeHtml(distanceText)}</span>
           <button class="fav-btn ${isFav ? 'favorited' : ''}" data-id="${ponto.id}" aria-label="Favoritar">
-            <i class="ti ti-heart"></i>
+            <i class="ti ti-${isFav ? 'heart-filled' : 'heart'}"></i>
           </button>
         </div>
       </div>
@@ -606,8 +579,8 @@ function renderMapMarkers() {
 
   const pontosComGps = state.pontos.filter(hasCoords);
   pontosComGps.forEach((ponto) => {
-    const linha = getLinha(ponto.linhaId);
-    const marker = createLineMarker(ponto.lat, ponto.lng, linha, getPointLineColors(ponto))
+    const linha = getLinha(ponto.linhaId, state.linhas);
+    const marker = createLineMarker(ponto.lat, ponto.lng, linha, getPointLineColors(ponto, state.pontos, state.linhas))
       .bindPopup(`
         <strong>${escapeHtml(ponto.nome)}</strong>
         ${escapeHtml(ponto.endereco)}<br>
@@ -683,7 +656,7 @@ function updateUserMarker() {
 function updateLocationSummary() {
   if (!state.userPosition) return;
 
-  const nearest = pontosComDistancia()
+  const nearest = pontosComDistancia(state.pontos, state.userPosition)
     .filter(hasCoords)
     .sort((a, b) => a.distancia - b.distancia)[0];
 
@@ -692,7 +665,7 @@ function updateLocationSummary() {
     return;
   }
 
-  const next = getNextDeparture(nearest.linhaId);
+  const next = getNextDeparture(nearest.linhaId, state.horarios);
   setLocationStatus(
     'Localização detectada',
     `${nearest.nome} (${formatDistance(nearest.distancia)})`,
@@ -708,15 +681,15 @@ function openStopModal(stopId) {
   const ponto = state.pontos.find(function (p) { return p.id === stopId; });
   if (!ponto) return;
 
-  const linha = getLinha(ponto.linhaId);
-  const next = getNextDeparture(ponto.linhaId);
-  const horarios = getHorario(ponto.linhaId);
-  const sharedLineItems = getPointLineItems(ponto);
+  const linha = getLinha(ponto.linhaId, state.linhas);
+  const next = getNextDeparture(ponto.linhaId, state.horarios);
+  const horarios = getHorario(ponto.linhaId, state.horarios, getCurrentDayType());
+  const sharedLineItems = getPointLineItems(ponto, state.pontos, state.linhas, state.horarios);
   const isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
 
   let distancia = null;
   if (state.userPosition && hasCoords(ponto)) {
-    distancia = calcularDistanciaKm(state.userPosition.lat, state.userPosition.lng, ponto.lat, ponto.lng);
+    distancia = distanceKm(state.userPosition.lat, state.userPosition.lng, ponto.lat, ponto.lng);
   }
 
   const allLinePoints = state.pontos
@@ -727,7 +700,7 @@ function openStopModal(stopId) {
     ponto: ponto,
     linha: linha,
     sharedLineItems: sharedLineItems,
-    lineColors: getPointLineColors(ponto),
+    lineColors: getPointLineColors(ponto, state.pontos, state.linhas),
     next: next,
     horarios: horarios,
     distancia: distancia,
@@ -751,8 +724,8 @@ function selectStop(stopId, options = {}) {
   if (!ponto) return;
 
   state.selectedStopId = stopId;
-  const linha = getLinha(ponto.linhaId);
-  const next = getNextDeparture(ponto.linhaId);
+  const linha = getLinha(ponto.linhaId, state.linhas);
+  const next = getNextDeparture(ponto.linhaId, state.horarios);
 
   document.querySelectorAll('[data-stop-id]').forEach((card) => {
     card.classList.toggle('selected', Number(card.dataset.stopId) === stopId);
@@ -784,186 +757,8 @@ function focusLine(lineId) {
   document.getElementById('mapa')?.scrollIntoView({ behavior: 'smooth' });
 }
 
-function pontosComDistancia() {
-  return state.pontos.map((ponto) => {
-    if (!state.userPosition || !hasCoords(ponto)) return { ...ponto };
-
-    return {
-      ...ponto,
-      distancia: calcularDistanciaKm(
-        state.userPosition.lat,
-        state.userPosition.lng,
-        ponto.lat,
-        ponto.lng,
-      ),
-    };
-  });
-}
-
-function calcularDistanciaKm(lat1, lng1, lat2, lng2) {
-  const earthRadiusKm = 6371;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return earthRadiusKm * c;
-}
-
-function getNextDeparture(linhaId) {
-  const horariosLinha = getHorario(linhaId);
-  if (horariosLinha.length === 0) {
-    return { time: '--', label: 'Sem horário', minutes: Number.POSITIVE_INFINITY };
-  }
-
-  const now = new Date();
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  const departures = horariosLinha
-    .map((horario) => {
-      const [hours, minutes] = horario.split(':').map(Number);
-      const total = hours * 60 + minutes;
-      return {
-        time: horario,
-        diff: total >= currentMinutes ? total - currentMinutes : total + 1440 - currentMinutes,
-      };
-    })
-    .sort((a, b) => a.diff - b.diff);
-
-  const next = departures[0];
-  return {
-    time: next.time,
-    label: formatMinutes(next.diff, next.time),
-    minutes: next.diff,
-  };
-}
-
-function formatMinutes(minutes, time) {
-  if (minutes <= 1) return 'Agora';
-  if (minutes < 60) return `${minutes} min`;
-  if (minutes < 1440) {
-    const hours = Math.floor(minutes / 60);
-    const rest = minutes % 60;
-    return rest === 0 ? `${hours}h` : `${hours}h ${rest}min`;
-  }
-  return `Amanhã ${time}`;
-}
-
-function formatDistance(distanceKm) {
-  if (distanceKm < 1) return `${Math.round(distanceKm * 1000)}m`;
-  return `${distanceKm.toFixed(1).replace('.', ',')}km`;
-}
-
 function setLocationStatus(location, nearest, departure) {
   if (els.userLocationText) els.userLocationText.textContent = location;
   if (els.nearestStopText) els.nearestStopText.textContent = nearest;
   if (els.nextDepartureText) els.nextDepartureText.textContent = departure;
-}
-
-function showEmpty(container, message) {
-  if (!container) return;
-  container.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
-}
-
-function getLinha(linhaId) {
-  return state.linhas.find((linha) => linha.id === linhaId);
-}
-
-function getPointLineColors(ponto) {
-  const colors = [];
-  const seen = new Set();
-
-  getPointLineItems(ponto).forEach((item) => {
-    const linha = item.linha;
-    if (!linha?.cor || seen.has(linha.cor)) return;
-    colors.push(linha.cor);
-    seen.add(linha.cor);
-  });
-
-  if (colors.length === 0) {
-    const ownLine = getLinha(ponto.linhaId);
-    if (ownLine?.cor) colors.push(ownLine.cor);
-  }
-
-  return colors.length ? colors : ['#888'];
-}
-
-function getPointLineItems(ponto) {
-  const key = getPointGroupKey(ponto);
-  const seen = new Set();
-  const items = [];
-
-  state.pontos.forEach((item) => {
-    if (getPointGroupKey(item) !== key || seen.has(item.linhaId)) return;
-    const linha = getLinha(item.linhaId);
-    if (!linha) return;
-    items.push({
-      ponto: item,
-      linha: linha,
-      next: getNextDeparture(item.linhaId),
-      horarios: getHorario(item.linhaId),
-    });
-    seen.add(item.linhaId);
-  });
-
-  return items.length ? items : [{
-    ponto: ponto,
-    linha: getLinha(ponto.linhaId),
-    next: getNextDeparture(ponto.linhaId),
-    horarios: getHorario(ponto.linhaId),
-  }];
-}
-
-function getPointGroupKey(ponto) {
-  return normalize([ponto.nome, ponto.endereco].join('|'));
-}
-
-function getMixedBackground(colors) {
-  if (!colors || colors.length === 0) return '#888';
-  if (colors.length === 1) return colors[0];
-  return 'linear-gradient(90deg, ' + colors.map((color, index) => {
-    const start = (index / colors.length) * 100;
-    const end = ((index + 1) / colors.length) * 100;
-    return color + ' ' + start + '% ' + end + '%';
-  }).join(', ') + ')';
-}
-
-function getHorario(linhaId) {
-  return state.horarios.find((item) => item.linhaId === linhaId)?.horarios || [];
-}
-
-function hasCoords(ponto) {
-  return ponto.lat !== null
-    && ponto.lng !== null
-    && ponto.lat !== undefined
-    && ponto.lng !== undefined
-    && ponto.lat !== ''
-    && ponto.lng !== ''
-    && Number.isFinite(Number(ponto.lat))
-    && Number.isFinite(Number(ponto.lng));
-}
-
-function normalize(value) {
-  return String(value)
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-}
-
-function toRad(value) {
-  return value * Math.PI / 180;
-}
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-function escapeAttr(value) {
-  return escapeHtml(value).replaceAll('`', '&#096;');
 }
