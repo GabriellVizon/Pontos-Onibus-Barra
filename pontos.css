@@ -83,24 +83,7 @@
     border: 1px solid var(--text-muted);
 }
 
-/* ========== ROUTE SELECT ========== */
-.route-select {
-    width: 100%;
-    background: var(--bg-card);
-    border: 1px solid var(--border-light);
-    color: #fff;
-    border-radius: var(--radius-md);
-    padding: 10px 12px;
-    font-family: 'Inter', sans-serif;
-    margin-bottom: 18px;
-    outline: none;
-    cursor: pointer;
-}
 
-.route-select option {
-    background: var(--bg-card);
-    color: #fff;
-}
 
 /* ========== LINE DETAIL CARD ========== */
 .line-detail-card {
@@ -219,34 +202,7 @@
     margin-top: 6px;
 }
 
-/* ========== DIRECTION TABS ========== */
-.direction-tabs {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 24px;
-}
 
-.direction-tab {
-    padding: 8px 16px;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 500;
-    transition: all .2s;
-}
-
-.direction-tab.active-dir {
-    background: var(--bg-hover);
-    border: 1px solid var(--border-light);
-    color: #fff;
-}
-
-.direction-tab.inactive-dir {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-    font-weight: 400;
-}
 
 /* ========== SCHEDULE ========== */
 .schedule-header {
@@ -786,9 +742,6 @@
         gap: 12px;
     }
 
-    .direction-tabs {
-        flex-wrap: wrap;
-    }
 }
 
 @media (max-width: 480px) {
@@ -831,11 +784,7 @@
     color: #000000;
 }
 
-[data-theme="light"] .route-select,
-[data-theme="light"] .route-select option {
-    color: #000000;
-    background: #ffffff;
-}
+
 
 [data-theme="light"] .schedule-time.active-time {
     color: #000000;

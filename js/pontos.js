@@ -34,7 +34,7 @@ var els = {
     locationStatus: document.getElementById('locationStatus'),
     scheduleTable: document.getElementById('scheduleTable'),
     scheduleNote: document.getElementById('scheduleNote'),
-    lineSelectText: document.getElementById('lineSelectText'),
+
     routeMap: document.getElementById('routeMap'),
     mapBtn: document.getElementById('mapBtn'),
     stopsCard: document.querySelector('.stops-card'),
@@ -80,7 +80,6 @@ async function init() {
             state.horarios = cached.horarios;
             initModalOnce();
             renderFilters();
-            renderSelect();
             hideSplash();
         }
 
@@ -103,7 +102,6 @@ async function init() {
 
         initModalOnce();
         renderFilters();
-        renderSelect();
         renderSchedule();
         initMap();
         renderMapMarkers();
@@ -120,7 +118,6 @@ async function init() {
             state.horarios = cached.horarios;
             initModalOnce();
             renderFilters();
-            renderSelect();
             initMap();
             renderMapMarkers();
             render();
@@ -149,20 +146,12 @@ function renderFilters() {
             state.visibleCount = 5;
             setActiveFilter(state.selectedFilter);
             updateUrlFilter();
-            syncLineSelect();
             render();
         });
     });
 }
 
-function renderSelect() {
-    var select = document.getElementById('routeSelect');
-    if (!select) return;
-    select.innerHTML = '<option value="all">Todas as linhas</option>';
-    state.linhas.forEach(function (linha) {
-        select.innerHTML += '<option value="linha-' + linha.id + '">' + escapeHtml(linha.nome) + '</option>';
-    });
-}
+
 
 function bindEvents() {
     if (els.searchInput) {
@@ -204,17 +193,7 @@ function bindEvents() {
         if (event.target.closest('.sidebar-link')) closeSidebar();
     });
 
-    var lineSelect = document.getElementById('routeSelect');
-    if (lineSelect) {
-        lineSelect.addEventListener('change', function () {
-            state.selectedFilter = this.value;
-            state.visibleCount = 5;
-            setActiveFilter(state.selectedFilter);
-            updateUrlFilter();
-            syncLineSelect();
-            render();
-        });
-    }
+
 
     if (els.pointsGrid) {
         els.pointsGrid.addEventListener('click', function (event) {
@@ -287,7 +266,6 @@ function applyInitialFilter() {
         state.selectedFilter = 'linha-' + lineId;
     }
     setActiveFilter(state.selectedFilter);
-    syncLineSelect();
 }
 
 function updateUrlFilter() {
@@ -555,7 +533,7 @@ function selectPoint(pointId, silent) {
     if (els.selectedAddress) els.selectedAddress.textContent = ponto.endereco + ' - ' + ponto.bairro;
     if (els.selectedLine) els.selectedLine.textContent = linha ? linha.nome : 'Linha nao informada';
     if (els.selectedNext) els.selectedNext.textContent = next.label + (linha ? ' - ' + linha.titulo : '');
-    if (els.lineSelectText) els.lineSelectText.textContent = linha ? linha.titulo : 'Linha selecionada';
+
 
     renderSchedule(ponto.linhaId, next.time);
     markSelectedCard();
@@ -831,10 +809,7 @@ function setActiveFilter(filter) {
     });
 }
 
-function syncLineSelect() {
-    var select = document.getElementById('routeSelect');
-    if (select) select.value = state.selectedFilter;
-}
+
 
 function markSelectedCard() {
     document.querySelectorAll('[data-point-id]').forEach(function (card) {
