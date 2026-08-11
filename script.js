@@ -2,7 +2,6 @@ const BARRA_BONITA_CENTER = [-22.4946, -48.5588];
 
 const state = {
   pontos: [],
-  linhas: [],
   horarios: [],
   userPosition: null,
   selectedStopId: null,
@@ -10,6 +9,7 @@ const state = {
   markerLayer: null,
   userMarker: null,
   markers: new Map(),
+  distanceCache: null,
 };
 
 const els = {
@@ -24,7 +24,6 @@ const els = {
   nearbySubtitle: document.getElementById('nearbySubtitle'),
   favStops: document.getElementById('favoriteStops'),
   favSubtitle: document.getElementById('favSubtitle'),
-  linesGrid: document.getElementById('linesGrid'),
   userLocationText: document.getElementById('userLocationText'),
   nearestStopText: document.getElementById('nearestStopText'),
   nextDepartureText: document.getElementById('nextDepartureText'),
@@ -36,6 +35,10 @@ const els = {
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
+  state.distanceCache = createDistanceCache(
+    function () { return state.pontos; },
+    function () { return state.userPosition; }
+  );
   setupNavigation();
   setupInteractions();
   initMap();
@@ -70,14 +73,18 @@ async function init() {
   try {
     if (cached) {
       state.pontos = cached.pontos;
-      state.linhas = cached.linhas;
       state.horarios = cached.horarios;
+      if (state.distanceCache) state.distanceCache.invalidate();
       initModalOnce();
       renderAll();
       hideSplash();
     }
     await carregarDados();
-    saveCache(state.pontos, state.linhas, state.horarios);
+    if (state.distanceCache) state.distanceCache.invalidate();
+    saveCache(state.pontos, state.horarios);
+    if (typeof Favorites !== 'undefined') {
+      Favorites.pruneFavorites(state.pontos.map(function (p) { return p.id; }));
+    }
     initModalOnce();
     renderAll();
     requestUserLocation();
@@ -91,24 +98,21 @@ async function init() {
 }
 
 async function carregarDados() {
-  const [pontosRes, linhasRes, horariosRes] = await Promise.all([
+  const [pontosRes, horariosRes] = await Promise.all([
     fetch('./dados/pontos.json'),
-    fetch('./dados/linhas.json'),
     fetch('./dados/horarios.json'),
   ]);
 
-  if (!pontosRes.ok || !linhasRes.ok || !horariosRes.ok) {
+  if (!pontosRes.ok || !horariosRes.ok) {
     throw new Error('Falha ao buscar arquivos JSON');
   }
 
-  const [pontos, linhas, horarios] = await Promise.all([
+  const [pontos, horarios] = await Promise.all([
     pontosRes.json(),
-    linhasRes.json(),
     horariosRes.json(),
   ]);
 
   state.pontos = pontos;
-  state.linhas = linhas;
   state.horarios = horarios;
 }
 
@@ -161,23 +165,10 @@ function setupInteractions() {
   document.addEventListener('click', (event) => {
     const action = event.target.closest('[data-action]');
     const stopCard = event.target.closest('[data-stop-id]');
-    const lineCard = event.target.closest('[data-line-id]');
 
     if (action?.dataset.action === 'focus-map' && stopCard) {
       event.preventDefault();
       selectStop(Number(stopCard.dataset.stopId), { scrollToMap: true });
-      return;
-    }
-
-    if (action?.dataset.action === 'filter-line' && lineCard) {
-      event.preventDefault();
-      window.location.href = `pontos.html?linha=${lineCard.dataset.lineId}`;
-      return;
-    }
-
-    if (action?.dataset.action === 'focus-line' && lineCard) {
-      event.preventDefault();
-      focusLine(Number(lineCard.dataset.lineId));
       return;
     }
 
@@ -221,7 +212,7 @@ function setupInteractions() {
 }
 
 function setupSearch() {
-  if (!els.searchInput || !els.searchResults) return;
+  if (!els.searchInput || !els.searchResults ) return;
 
   els.searchMobileBtn?.addEventListener('click', () => {
     document.getElementById('searchBox')?.classList.toggle('mobile-open');
@@ -266,40 +257,43 @@ function setupSearch() {
       hideSearchSuggestions();
     }
   });
+
+  const searchIcon = document.querySelector('#searchBox .ti-search');
+  searchIcon?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    els.searchInput?.focus();
+  });
 }
 
+
 function getSearchSuggestions(term) {
-  const lista = pontosComDistancia(state.pontos, state.userPosition);
-  return lista
-    .filter((ponto) => {
-      const linha = getLinha(ponto.linhaId, state.linhas);
+  const lista = state.distanceCache ? state.distanceCache.getAll() : pontosComDistancia(state.pontos, state.userPosition);
+  const sortMode = state.distanceCache ? state.distanceCache.getSortMode() : 'ordem';
+  return sortPointsByContext(
+    lista.filter((ponto) => {
       return normalize([
         ponto.nome,
         ponto.endereco,
         ponto.bairro,
-        linha?.nome || '',
-        linha?.titulo || '',
       ].join(' ')).includes(term);
-    })
-    .slice(0, 10);
+    }),
+    sortMode
+  ).slice(0, 10);
 }
 
 function getDiverseSuggestions() {
-  const lista = pontosComDistancia(state.pontos, state.userPosition);
+  const lista = state.distanceCache ? state.distanceCache.getAll() : pontosComDistancia(state.pontos, state.userPosition);
+  const sortMode = state.distanceCache ? state.distanceCache.getSortMode() : 'ordem';
+  const sorted = sortPointsByContext(lista, sortMode);
   const seenBairros = new Set();
-  const seenLinhas = new Set();
   const result = [];
-  for (const ponto of lista) {
+  for (const ponto of sorted) {
     if (result.length >= 10) break;
-    const linha = getLinha(ponto.linhaId, state.linhas);
     const bairroKey = normalize(ponto.bairro);
-    const linhaKey = linha ? linha.id : 0;
     const isNewBairro = !seenBairros.has(bairroKey);
-    const isNewLinha = !seenLinhas.has(linhaKey);
-    if (isNewBairro || isNewLinha) {
+    if (isNewBairro) {
       result.push(ponto);
       seenBairros.add(bairroKey);
-      seenLinhas.add(linhaKey);
     }
   }
   return result.slice(0, 10);
@@ -314,7 +308,6 @@ function renderSearchSuggestions(results) {
 
   els.searchResults.innerHTML = results
     .map((ponto) => {
-      const linha = getLinha(ponto.linhaId, state.linhas);
       const distanceText = typeof ponto.distancia === 'number'
         ? `<span><i class="ti ti-navigation"></i> ${formatDistance(ponto.distancia)}</span>`
         : '';
@@ -350,7 +343,6 @@ function hideSearchSuggestions() {
 }
 
 function renderAll() {
-  renderLines();
   renderFavoriteStops();
   renderNearbyStops();
   renderMapMarkers();
@@ -365,8 +357,12 @@ function renderFavoriteStops() {
     return;
   }
   if (els.favSubtitle) els.favSubtitle.textContent = 'Seus pontos favoritos.';
-  const lista = state.userPosition ? pontosComDistancia(state.pontos, state.userPosition) : state.pontos;
-  const favPontos = lista.filter(function (p) { return favIds.indexOf(String(p.id)) !== -1; });
+  const lista = state.distanceCache ? state.distanceCache.getAll() : (state.userPosition ? pontosComDistancia(state.pontos, state.userPosition) : state.pontos);
+  const sortMode = state.distanceCache ? state.distanceCache.getSortMode() : (state.userPosition ? 'distancia' : 'ordem');
+  const favPontos = sortPointsByContext(
+    lista.filter(function (p) { return favIds.indexOf(String(p.id)) !== -1; }),
+    sortMode
+  );
   els.favStops.innerHTML = favPontos.map(function (p) { return renderStopCard(p, { compact: true }); }).join('');
 }
 
@@ -381,8 +377,9 @@ function renderNearbyStops() {
     return;
   }
 
-  const nearby = pontosComDistancia(state.pontos, state.userPosition)
-    .filter((ponto) => hasCoords(ponto))
+  const todos = state.distanceCache ? state.distanceCache.getAll() : pontosComDistancia(state.pontos, state.userPosition);
+  const nearby = todos
+    .filter((ponto) => hasCoords(ponto) && typeof ponto.distancia === 'number')
     .sort((a, b) => a.distancia - b.distancia)
     .slice(0, 3);
 
@@ -395,68 +392,9 @@ function renderNearbyStops() {
     .join('');
 }
 
-function renderLines() {
-  if (!els.linesGrid) return;
-
-  els.linesGrid.innerHTML = state.linhas
-    .map((linha) => {
-      const pontosLinha = state.pontos
-        .filter((ponto) => ponto.linhaId === linha.id)
-        .sort((a, b) => a.ordem - b.ordem);
-      const horariosLinha = getHorario(linha.id, state.horarios, getCurrentDayType());
-      const next = getNextDeparture(linha.id, state.horarios);
-      const primeiroPonto = pontosLinha[0]?.nome || 'Ponto inicial não informado';
-      const ultimoPonto = pontosLinha[pontosLinha.length - 1]?.nome || 'Ponto final não informado';
-
-      return `
-        <div class="line-card" data-line-id="${linha.id}">
-          <div class="line-card-header">
-            <div class="line-card-title-group">
-              <div class="line-dot" style="background:${escapeAttr(linha.cor)}"></div>
-              <span class="line-card-title">${escapeHtml(linha.nome)}</span>
-            </div>
-            <button class="card-action" type="button" data-action="focus-line" aria-label="Ver linha no mapa">
-              <i class="ti ti-map"></i>
-            </button>
-          </div>
-          <p class="line-card-route">${escapeHtml(linha.titulo)}</p>
-          <span class="line-card-schedule-label">Tabela de horários</span>
-          <div class="line-card-times">
-            ${horariosLinha
-              .map((horario) => `
-                <span class="time-chip ${horario === next.time ? 'active' : 'inactive'}">${escapeHtml(horario)}</span>
-              `)
-              .join('')}
-          </div>
-          <div class="line-card-progress">
-            <div class="progress-item">
-              <div class="progress-dot active"></div>
-              <span class="progress-text"><strong>${pontosLinha.length} pontos:</strong> ${escapeHtml(primeiroPonto)}</span>
-            </div>
-            <div class="progress-item">
-              <div class="progress-dot next"></div>
-              <span class="progress-text">Final: ${escapeHtml(ultimoPonto)}</span>
-            </div>
-            <div class="progress-item">
-              <div class="progress-dot next"></div>
-              <span class="progress-text">Próxima saída: ${escapeHtml(next.label)}</span>
-            </div>
-          </div>
-          <div class="line-card-footer">
-            <span data-action="filter-line">VER PONTOS DA LINHA</span>
-          </div>
-        </div>
-      `;
-    })
-    .join('');
-}
-
 function renderStopCard(ponto, options = {}) {
-  const linha = getLinha(ponto.linhaId, state.linhas);
-  const next = getNextDeparture(ponto.linhaId, state.horarios);
-  const horariosLinha = getHorario(ponto.linhaId, state.horarios, getCurrentDayType());
-  const lineColors = getPointLineColors(ponto, state.pontos, state.linhas);
-  const dotBackground = getMixedBackground(lineColors);
+  const next = getNextDeparture(state.horarios);
+  const horariosLinha = getHorario(state.horarios, getCurrentDayType());
   const distanceText = typeof ponto.distancia === 'number'
     ? formatDistance(ponto.distancia)
     : hasCoords(ponto)
@@ -491,12 +429,6 @@ function renderStopCard(ponto, options = {}) {
       </div>
       <div class="card-meta">
         <span class="meta-chip">${escapeHtml(ponto.bairro)}</span>
-        <span class="meta-chip line-meta-chip"><span class="chip-dot" style="background:${escapeAttr(dotBackground)}"></span>${escapeHtml(linha?.nome || 'Linha não informada')}</span>
-        <span class="meta-chip">Ordem ${escapeHtml(String(ponto.ordem))}</span>
-      </div>
-      <div class="card-line">
-        <span class="card-line-name">${escapeHtml(linha?.titulo || 'Rota não informada')}</span>
-        <span class="card-line-time waiting">${horariosLinha.length} horários</span>
       </div>
       <div class="card-horarios">
         ${horariosLinha
@@ -540,24 +472,10 @@ function initMap() {
   state.markerLayer = L.layerGroup().addTo(state.map);
 }
 
-function createLineMarker(lat, lng, linha, lineColors) {
-  const colors = lineColors && lineColors.length ? lineColors : [linha && linha.cor ? linha.cor : '#888'];
-  const fill = colors.length === 1 ? colors[0] : 'url(#pinGradient)';
-  const defs = colors.length === 1
-    ? ''
-    : [
-        '<defs><linearGradient id="pinGradient" x1="0%" y1="0%" x2="100%" y2="0%">',
-        colors.map((color, index) => {
-          const start = (index / colors.length) * 100;
-          const end = ((index + 1) / colors.length) * 100;
-          return '<stop offset="' + start + '%" stop-color="' + color + '"/><stop offset="' + end + '%" stop-color="' + color + '"/>';
-        }).join(''),
-        '</linearGradient></defs>',
-      ].join('');
+function createLineMarker(lat, lng) {
   const svg = [
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="36" viewBox="0 0 24 36">',
-    defs,
-    '<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24c0-6.6-5.4-12-12-12z" fill="' + fill + '"/>',
+    '<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24c0-6.6-5.4-12-12-12z" fill="' + BUS_COLOR + '"/>',
     '<circle cx="12" cy="12" r="4.5" fill="#fff"/>',
     '</svg>'
   ].join('');
@@ -579,12 +497,11 @@ function renderMapMarkers() {
 
   const pontosComGps = state.pontos.filter(hasCoords);
   pontosComGps.forEach((ponto) => {
-    const linha = getLinha(ponto.linhaId, state.linhas);
-    const marker = createLineMarker(ponto.lat, ponto.lng, linha, getPointLineColors(ponto, state.pontos, state.linhas))
+    const marker = createLineMarker(ponto.lat, ponto.lng)
       .bindPopup(`
         <strong>${escapeHtml(ponto.nome)}</strong>
         ${escapeHtml(ponto.endereco)}<br>
-        ${escapeHtml(linha?.nome || '')} - ${escapeHtml(ponto.bairro)}
+        ${escapeHtml(ponto.bairro)}
       `)
       .on('click', function () { openStopModal(ponto.id); });
 
@@ -612,6 +529,7 @@ function requestUserLocation(options = {}) {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
       };
+      if (state.distanceCache) state.distanceCache.invalidate();
 
       setLocationStatus('Localização detectada', 'Calculando...', '--');
       renderNearbyStops();
@@ -623,6 +541,7 @@ function requestUserLocation(options = {}) {
       }
     },
     (error) => {
+      if (state.distanceCache) state.distanceCache.invalidate();
       const message = error.code === error.PERMISSION_DENIED
         ? 'Permissão negada'
         : 'Não foi possível localizar';
@@ -656,8 +575,9 @@ function updateUserMarker() {
 function updateLocationSummary() {
   if (!state.userPosition) return;
 
-  const nearest = pontosComDistancia(state.pontos, state.userPosition)
-    .filter(hasCoords)
+  const todos = state.distanceCache ? state.distanceCache.getAll() : pontosComDistancia(state.pontos, state.userPosition);
+  const nearest = todos
+    .filter(function (p) { return hasCoords(p) && typeof p.distancia === 'number'; })
     .sort((a, b) => a.distancia - b.distancia)[0];
 
   if (!nearest) {
@@ -665,7 +585,7 @@ function updateLocationSummary() {
     return;
   }
 
-  const next = getNextDeparture(nearest.linhaId, state.horarios);
+  const next = getNextDeparture(state.horarios);
   setLocationStatus(
     'Localização detectada',
     `${nearest.nome} (${formatDistance(nearest.distancia)})`,
@@ -681,10 +601,8 @@ function openStopModal(stopId) {
   const ponto = state.pontos.find(function (p) { return p.id === stopId; });
   if (!ponto) return;
 
-  const linha = getLinha(ponto.linhaId, state.linhas);
-  const next = getNextDeparture(ponto.linhaId, state.horarios);
-  const horarios = getHorario(ponto.linhaId, state.horarios, getCurrentDayType());
-  const sharedLineItems = getPointLineItems(ponto, state.pontos, state.linhas, state.horarios);
+  const next = getNextDeparture(state.horarios);
+  const horarios = getHorario(state.horarios, getCurrentDayType());
   const isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
 
   let distancia = null;
@@ -692,17 +610,13 @@ function openStopModal(stopId) {
     distancia = distanceKm(state.userPosition.lat, state.userPosition.lng, ponto.lat, ponto.lng);
   }
 
-  const allLinePoints = state.pontos
-    .filter(function (p) { return p.linhaId === ponto.linhaId; })
-    .sort(function (a, b) { return a.ordem - b.ordem; });
+  const allLinePoints = state.pontos.slice().sort(function (a, b) { return (a.ordem || 0) - (b.ordem || 0); });
 
   Modal.open({
     ponto: ponto,
-    linha: linha,
-    sharedLineItems: sharedLineItems,
-    lineColors: getPointLineColors(ponto, state.pontos, state.linhas),
     next: next,
     horarios: horarios,
+    lineColor: BUS_COLOR,
     distancia: distancia,
     isFav: isFav,
     allLinePoints: allLinePoints,
@@ -724,8 +638,7 @@ function selectStop(stopId, options = {}) {
   if (!ponto) return;
 
   state.selectedStopId = stopId;
-  const linha = getLinha(ponto.linhaId, state.linhas);
-  const next = getNextDeparture(ponto.linhaId, state.horarios);
+  const next = getNextDeparture(state.horarios);
 
   document.querySelectorAll('[data-stop-id]').forEach((card) => {
     card.classList.toggle('selected', Number(card.dataset.stopId) === stopId);
@@ -734,8 +647,8 @@ function selectStop(stopId, options = {}) {
   if (els.selectedStopName) els.selectedStopName.textContent = ponto.nome;
   if (els.selectedStopDetails) {
     els.selectedStopDetails.textContent = hasCoords(ponto)
-      ? `${linha?.nome || 'Linha'} - ${ponto.endereco} - próxima saída ${next.label}`
-      : `${linha?.nome || 'Linha'} - este ponto ainda não tem latitude e longitude.`;
+      ? `${ponto.endereco} - próxima saída ${next.label}`
+      : `${ponto.endereco} - este ponto ainda não tem latitude e longitude.`;
   }
 
   if (hasCoords(ponto) && state.map) {
@@ -746,15 +659,6 @@ function selectStop(stopId, options = {}) {
   if (options.scrollToMap) {
     document.getElementById('mapa')?.scrollIntoView({ behavior: 'smooth' });
   }
-}
-
-function focusLine(lineId) {
-  const pontosLinha = state.pontos.filter((ponto) => ponto.linhaId === lineId && hasCoords(ponto));
-  if (!state.map || pontosLinha.length === 0) return;
-
-  const bounds = L.latLngBounds(pontosLinha.map((ponto) => [ponto.lat, ponto.lng]));
-  state.map.fitBounds(bounds, { padding: [28, 28], maxZoom: 15 });
-  document.getElementById('mapa')?.scrollIntoView({ behavior: 'smooth' });
 }
 
 function setLocationStatus(location, nearest, departure) {

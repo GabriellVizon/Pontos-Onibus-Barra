@@ -147,17 +147,6 @@
     if (onCloseCallback) onCloseCallback();
   }
 
-  function getSharedLineItems(data) {
-    if (data.sharedLineItems && data.sharedLineItems.length) return data.sharedLineItems;
-    if (!data.linha) return [];
-    return [{
-      ponto: data.ponto,
-      linha: data.linha,
-      next: data.next,
-      horarios: data.horarios || []
-    }];
-  }
-
   /* ---- render sections ---- */
 
   function renderHeader(data) {
@@ -177,14 +166,7 @@
 
   function renderNextBus(data) {
     var el = modalEl.querySelector('#modalNextBus');
-    var items = getSharedLineItems(data);
-    if (items.length === 0) {
-      el.innerHTML = '<div class="next-bus-card"><span class="next-bus-label">Pr&oacute;ximo &ocirc;nibus</span><div class="next-bus-main"><i class="ti ti-bus"></i><span class="next-bus-time">--</span></div></div>';
-      return;
-    }
-    var item = items[0];
-    var nextLabel = item.next ? item.next.label : '--';
-    var lineColor = item.linha.cor || '#e53935';
+    var nextLabel = data.next ? data.next.label : '--';
     el.innerHTML =
       '<div class="next-bus-card">' +
         '<div class="next-bus-left">' +
@@ -195,7 +177,7 @@
           '</div>' +
         '</div>' +
         '<div class="next-bus-pill">' +
-          '<span class="next-bus-pill-name">' + escapeHtml(item.linha.nome) + '</span>' +
+          '<span class="next-bus-pill-name">Rota Circular</span>' +
         '</div>' +
       '</div>';
   }
@@ -248,25 +230,21 @@
   }
 
   function renderScheduleTab(el, data) {
-    var items = getSharedLineItems(data).filter(function (it) {
-      return it.horarios && it.horarios.length > 0;
-    });
-    if (items.length === 0) {
+    var horarios = data.horarios;
+    if (!horarios || horarios.length === 0) {
       el.innerHTML = '<p class="tab-empty">Nenhum hor&aacute;rio dispon&iacute;vel.</p>';
       return;
     }
-    var html = items.map(function (item) {
-      var nextTime = item.next ? item.next.time : null;
-      var times = item.horarios.map(function (t) {
-        var cls = t === nextTime ? ' modal-time-active' : '';
-        return '<span class="modal-time' + cls + '">' + escapeHtml(t) + '</span>';
-      }).join('');
-      return '<div class="schedule-group">' +
-        '<div class="schedule-line-label"><span class="schedule-dot" style="background:' + (item.linha.cor || '#e53935') + '"></span>' + escapeHtml(item.linha.nome) + '</div>' +
+    var nextTime = data.next ? data.next.time : null;
+    var times = horarios.map(function (t) {
+      var cls = t === nextTime ? ' modal-time-active' : '';
+      return '<span class="modal-time' + cls + '">' + escapeHtml(t) + '</span>';
+    }).join('');
+    el.innerHTML =
+      '<div class="schedule-group">' +
+        '<div class="schedule-line-label"><span class="schedule-dot" style="background:' + (data.lineColor || BUS_COLOR) + '"></span>Rota Circular</div>' +
         '<div class="modal-times-grid">' + times + '</div>' +
       '</div>';
-    }).join('');
-    el.innerHTML = html;
   }
 
   function renderRouteTab(el, data) {
@@ -296,11 +274,9 @@
 
   function sharePoint(data) {
     var ponto = data.ponto;
-    var items = getSharedLineItems(data);
     var text = [
       ponto.nome,
       ponto.endereco + ' - ' + ponto.bairro,
-      items.map(function (it) { return it.linha.nome; }).join(', '),
       'BarraBonita/SP',
       'https://www.google.com/maps?q=' + ponto.lat + ',' + ponto.lng
     ].filter(Boolean).join('\n');

@@ -43,11 +43,20 @@
     }
   }
 
+  function pruneFavorites(validIds) {
+    var valid = {};
+    (validIds || []).forEach(function (id) { valid[String(id)] = true; });
+    var list = getFavorites().filter(function (fid) { return valid[fid]; });
+    saveFavorites(list);
+    return list;
+  }
+
   window.Favorites = {
     getFavorites: getFavorites,
     addFavorite: addFavorite,
     removeFavorite: removeFavorite,
     isFavorite: isFavorite,
-    toggleFavorite: toggleFavorite
+    toggleFavorite: toggleFavorite,
+    pruneFavorites: pruneFavorites
   };
 })();

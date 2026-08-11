@@ -4,17 +4,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BarraBus - Linhas e Horários</title>
+    <title>BarraBus - Pontos e Horários</title>
 
     <meta property="og:title" content="BarraBus">
-    <meta property="og:description" content="Pontos, linhas e horários de ônibus em Barra Bonita">
+    <meta property="og:description" content="Pontos e horários de ônibus em Barra Bonita">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://barrabus.app">
     <meta property="og:locale" content="pt_BR">
 
-    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#e53935">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net;
+        style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://fonts.googleapis.com;
+        img-src 'self' data: blob: https://unpkg.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org;
+        font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net;
+        connect-src 'self' https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://unpkg.com https://cdn.jsdelivr.net;
+        upgrade-insecure-requests
+    ">
+    <link rel="manifest" href="manifest.json">
     <link rel="icon" href="img/icon.svg" type="image/svg+xml">
+
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
+    <link rel="dns-prefetch" href="https://a.tile.openstreetmap.org">
+    <link rel="dns-prefetch" href="https://b.tile.openstreetmap.org">
+    <link rel="dns-prefetch" href="https://c.tile.openstreetmap.org">
 
     <!-- Tabler Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.2.0/dist/tabler-icons.min.css">
@@ -29,81 +47,13 @@
     <link rel="stylesheet" href="pontos.css">
 </head>
 <body>
-    <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
-
-    <div id="splash" class="splash">
-        <div class="splash-content">
-            <div class="splash-icon"><i class="ti ti-bus"></i></div>
-            <h1 class="splash-title">BarraBus</h1>
-            <p class="splash-sub">Carregando...</p>
-            <div class="splash-spinner"></div>
-        </div>
-    </div>
-
-    <div id="offlineBanner" class="offline-banner" style="display:none">Você está offline</div>
-
-    <button id="backToTop" class="back-to-top" aria-label="Voltar ao topo">
-        <i class="ti ti-chevron-up"></i>
-    </button>
-
-    <div class="app-layout">
-        <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-logo">
-                <div class="sidebar-logo-icon">
-                    <img src="img/realista-point.png" alt="">
-                </div>
-            </div>
-            <div class="sidebar-label">MENU</div>
-            <nav class="sidebar-nav">
-                <a href="index.html" class="sidebar-link">
-                    <i class="ti ti-home"></i> INÍCIO
-                </a>
-                <a href="pontos.html" class="sidebar-link active">
-                    <i class="ti ti-map-pin"></i> PONTOS
-                </a>
-            </nav>
-        </aside>
-
-        <!-- Main -->
-        <main class="main" id="main-content">
-        <!-- Topbar -->
-        <header class="topbar">
-            <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Abrir menu">
-                <i class="ti ti-menu-2"></i>
-            </button>
-            <a href="index.html" class="topbar-brand">
-                <div class="topbar-brand-icon">
-                    <i class="ti ti-bus"></i>
-                </div>
-                <span>BarraBus</span>
-            </a>
-            <div class="topbar-right">
-                <button class="theme-toggle" id="themeToggle" type="button" aria-label="Modo claro">
-                    <i class="ti ti-sun"></i>
-                </button>
-                <div class="search-box" id="searchBox">
-                    <i class="ti ti-search"></i>
-                    <input type="search" id="searchInput" placeholder="Buscar ponto, bairro ou linha..." autocomplete="off" aria-label="Buscar ponto, bairro ou linha">
-                    <div class="search-results" id="searchResults"></div>
-                </div>
-                <div class="search-icon-btn">
-                    <i class="ti ti-search search-icon-mobile" id="searchMobileBtn"></i>
-                </div>
-            </div> 
-        </header>
-
+    <template id="pageContentTemplate">
         <!-- Content -->
         <div class="content">
             <!-- Main Column -->
             <div class="content-main">
                 <h1 class="page-title">Pontos de Ônibus</h1>
                 <p class="page-subtitle" id="pageSubtitle">Carregando pontos cadastrados em Barra Bonita.</p>
-
-                <!-- Filter Tags -->
-                <div class="filter-tags" id="filterTags"></div>
 
                 <!-- Line Detail Card -->
                 <div class="line-detail-card">
@@ -133,9 +83,9 @@
                         <div class="info-card">
                             <div class="info-card-header">
                                 <i class="ti ti-route"></i>
-                                <span class="info-card-label">STATUS DA ROTA</span>
+                                <span class="info-card-label">PRÓXIMO ÔNIBUS</span>
                             </div>
-                            <span class="info-card-value small-value" id="selectedLine">Todas as linhas</span>
+                            <span class="info-card-value small-value" id="selectedLine">Rota Circular</span>
                             <p class="info-card-sub" id="selectedNext">Próxima saída calculada pelo horário atual.</p>
                         </div>
                     </div>
@@ -148,7 +98,7 @@
                     <div class="schedule-table" id="scheduleTable">
                         <tbody id="scheduleBody"></tbody>
                     </div>
-                    <p class="schedule-note" id="scheduleNote">Selecione um ponto para ver os horários da linha.</p>
+                    <p class="schedule-note" id="scheduleNote">Selecione um ponto para ver a próxima saída.</p>
                 </div>
                 <div class="points-grid" id="pointsGrid" aria-live="polite"></div>
                 <div class="show-more-container" id="showMoreContainer"></div>
@@ -175,28 +125,16 @@
                 </div>
             </aside>
         </div>
-    </main>
-    </div><!-- /app-layout -->
+    </template>
 
-    <!-- FAB -->
-    <button class="fab" id="fabBtn" aria-label="Atualizar">
-        <i class="ti ti-refresh"></i>
-    </button>
-    
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/theme.js"></script>
-    <script src="js/favorites.js"></script>
-    <script src="js/modal.js"></script>
-    <script src="js/pontos.js"></script>
-    <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
-        navigator.serviceWorker.register('sw.js').catch(function() {});
-      });
-    }
-    </script>
+    <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script defer src="js/utils.js"></script>
+    <script defer src="js/theme.js"></script>
+    <script defer src="js/favorites.js"></script>
+    <script defer src="js/modal.js"></script>
+    <script defer src="js/appShell.js"></script>
+    <script defer src="js/bootstrap-points.js"></script>
+    <script defer src="js/pontos.js"></script>
 </body>
 
 </html>

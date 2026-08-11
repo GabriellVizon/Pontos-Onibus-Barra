@@ -11,6 +11,8 @@ function escapeAttr(value) {
   return escapeHtml(value).replaceAll('`', '&#096;');
 }
 
+var BUS_COLOR = '#e74c3c';
+
 function normalize(value) {
   return String(value || '')
     .toLowerCase()
@@ -33,10 +35,6 @@ function hasCoords(ponto) {
     && Number.isFinite(Number(ponto.lng));
 }
 
-function getLinha(linhaId, linhas) {
-  return linhas.find(function (linha) { return linha.id === linhaId; });
-}
-
 function getCurrentDayType() {
   var day = new Date().getDay();
   if (day === 0) return 'domingo';
@@ -44,16 +42,15 @@ function getCurrentDayType() {
   return 'uteis';
 }
 
-function getHorario(linhaId, horarios, dayType) {
-  var item = horarios.find(function (h) { return h.linhaId === linhaId; });
-  if (!item) return [];
-  if (Array.isArray(item.horarios)) return item.horarios;
+function getHorario(horarios, dayType) {
+  if (!horarios) return [];
+  if (Array.isArray(horarios)) return horarios;
   var day = dayType || getCurrentDayType();
-  return (item.horarios && item.horarios[day]) ? item.horarios[day] : [];
+  return (horarios[day] && Array.isArray(horarios[day])) ? horarios[day] : [];
 }
 
-function getNextDeparture(linhaId, horarios) {
-  var horariosLinha = getHorario(linhaId, horarios);
+function getNextDeparture(horarios) {
+  var horariosLinha = getHorario(horarios);
   if (horariosLinha.length === 0) {
     return { time: '--', label: 'Sem horário', minutes: Number.POSITIVE_INFINITY };
   }
@@ -121,65 +118,6 @@ function pontosComDistancia(pontos, userPosition) {
   });
 }
 
-function getPointGroupKey(ponto) {
-  return normalize([ponto.nome, ponto.endereco].join('|'));
-}
-
-function getPointLineItems(ponto, pontos, linhas, horarios) {
-  var key = getPointGroupKey(ponto);
-  var seen = {};
-  var items = [];
-
-  pontos.forEach(function (item) {
-    if (getPointGroupKey(item) !== key || seen[item.linhaId]) return;
-    var linha = getLinha(item.linhaId, linhas);
-    if (!linha) return;
-    items.push({
-      ponto: item,
-      linha: linha,
-      next: getNextDeparture(item.linhaId, horarios),
-      horarios: getHorario(item.linhaId, horarios),
-    });
-    seen[item.linhaId] = true;
-  });
-
-  return items.length ? items : [{
-    ponto: ponto,
-    linha: getLinha(ponto.linhaId, linhas),
-    next: getNextDeparture(ponto.linhaId, horarios),
-    horarios: getHorario(ponto.linhaId, horarios),
-  }];
-}
-
-function getPointLineColors(ponto, pontos, linhas) {
-  var colors = [];
-  var seen = {};
-
-  getPointLineItems(ponto, pontos, linhas, []).forEach(function (item) {
-    var linha = item.linha;
-    if (!linha || !linha.cor || seen[linha.cor]) return;
-    colors.push(linha.cor);
-    seen[linha.cor] = true;
-  });
-
-  if (colors.length === 0) {
-    var ownLine = getLinha(ponto.linhaId, linhas);
-    if (ownLine && ownLine.cor) colors.push(ownLine.cor);
-  }
-
-  return colors.length ? colors : ['#888'];
-}
-
-function getMixedBackground(colors) {
-  if (!colors || colors.length === 0) return '#888';
-  if (colors.length === 1) return colors[0];
-  return 'linear-gradient(90deg, ' + colors.map(function (color, index) {
-    var start = (index / colors.length) * 100;
-    var end = ((index + 1) / colors.length) * 100;
-    return color + ' ' + start + '% ' + end + '%';
-  }).join(', ') + ')';
-}
-
 function hexToRgba(hex, alpha) {
   var clean = String(hex || '').replace('#', '');
   if (clean.length === 3) {
@@ -195,14 +133,14 @@ function hexToRgba(hex, alpha) {
 
 function loadCache() {
   try {
-    var data = localStorage.getItem('busCache');
+    var data = localStorage.getItem('busCacheV2');
     return data ? JSON.parse(data) : null;
   } catch (e) { return null; }
 }
 
-function saveCache(pontos, linhas, horarios) {
+function saveCache(pontos, horarios) {
   try {
-    localStorage.setItem('busCache', JSON.stringify({ pontos: pontos, linhas: linhas, horarios: horarios }));
+    localStorage.setItem('busCacheV2', JSON.stringify({ pontos: pontos, horarios: horarios }));
   } catch (e) {}
 }
 
@@ -237,6 +175,97 @@ function setupOfflineDetection() {
 function showEmpty(container, message) {
   if (!container) return;
   container.innerHTML = '<div class="empty-state">' + escapeHtml(message) + '</div>';
+}
+
+function sortPointsByContext(lista, sortMode) {
+  var arr = Array.isArray(lista) ? lista.slice() : [];
+  if (sortMode === 'distancia') {
+    arr.sort(function (a, b) {
+      var ad = typeof a.distancia === 'number' ? a.distancia : Number.POSITIVE_INFINITY;
+      var bd = typeof b.distancia === 'number' ? b.distancia : Number.POSITIVE_INFINITY;
+      if (ad !== bd) return ad - bd;
+      return (a.ordem || 0) - (b.ordem || 0);
+    });
+  } else {
+    arr.sort(function (a, b) {
+      return (a.ordem || 0) - (b.ordem || 0);
+    });
+  }
+  return arr;
+}
+
+function createDistanceCache(getPontos, getUserPosition, onChange) {
+  var cachedList = null;
+  var cachedById = new Map();
+  var lastPontosRef = null;
+  var lastPositionKey = '__no_position__';
+  var dirty = true;
+
+  function positionKey(pos) {
+    if (!pos) return '__no_position__';
+    return (pos.lat + '_' + pos.lng);
+  }
+
+  function isDirty() {
+    if (dirty) return true;
+    var pontosNow = (typeof getPontos === 'function') ? getPontos() : null;
+    if (lastPontosRef !== pontosNow) return true;
+    var posNow = (typeof getUserPosition === 'function') ? getUserPosition() : null;
+    if (lastPositionKey !== positionKey(posNow)) return true;
+    return false;
+  }
+
+  function rebuild() {
+    var pontos = (typeof getPontos === 'function') ? getPontos() : [];
+    var userPosition = (typeof getUserPosition === 'function') ? getUserPosition() : null;
+    var list = pontosComDistancia(pontos || [], userPosition || null);
+    cachedList = list;
+    cachedById = new Map();
+    list.forEach(function (ponto) {
+      if (ponto && ponto.id != null) cachedById.set(String(ponto.id), ponto);
+    });
+    lastPontosRef = pontos || null;
+    lastPositionKey = positionKey(userPosition);
+    dirty = false;
+    if (typeof onChange === 'function') {
+      try { onChange(); } catch (e) {}
+    }
+  }
+
+  function getAll() {
+    if (isDirty()) rebuild();
+    return cachedList ? cachedList.slice() : [];
+  }
+
+  function forSingle(ponto) {
+    if (!ponto || ponto.id == null) return ponto;
+    if (isDirty()) rebuild();
+    var cached = cachedById.get(String(ponto.id));
+    if (cached) return cached;
+    var userPosition = (typeof getUserPosition === 'function') ? getUserPosition() : null;
+    var arranged = pontosComDistancia([ponto], userPosition || null);
+    var result = arranged && arranged[0] ? arranged[0] : ponto;
+    cachedById.set(String(ponto.id), result);
+    return result;
+  }
+
+  function invalidate() {
+    dirty = true;
+    cachedList = null;
+    cachedById.clear();
+  }
+
+  function getSortMode() {
+    var pos = (typeof getUserPosition === 'function') ? getUserPosition() : null;
+    return (pos && typeof pos.lat === 'number' && typeof pos.lng === 'number') ? 'distancia' : 'ordem';
+  }
+
+  return {
+    getAll: getAll,
+    forSingle: forSingle,
+    invalidate: invalidate,
+    getSortMode: getSortMode
+  };
 }
 
 function cardClickEffect(card, callback) {

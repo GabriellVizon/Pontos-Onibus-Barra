@@ -1,4 +1,4 @@
-const CACHE_NAME = 'barrabus-v2';
+const CACHE_NAME = 'barrabus-v3';
 
 const PRE_CACHE_URLS = [
   '/index.html',
@@ -13,7 +13,6 @@ const PRE_CACHE_URLS = [
   '/js/modal.js',
   '/js/pontos.js',
   '/dados/pontos.json',
-  '/dados/linhas.json',
   '/dados/horarios.json'
 ];
 
