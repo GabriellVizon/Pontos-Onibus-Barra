@@ -92,15 +92,11 @@ body.modal-open {
     gap: 8px;
     margin-bottom: 24px;
     padding: 0 4px;
-    background: var(--red);
-    border-radius: var(--radius-lg);
 }
 
 .sidebar-logo-icon {
-    width: 28px;
-    height: 28px;
-    background: var(--red);
-    border-radius: var(--radius-sm);
+    width: 25px;
+    height: 25px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -109,10 +105,9 @@ body.modal-open {
 }
 
 .sidebar-logo-icon:has(img) {
-    width: 100px;
-    height: 100px;
+    width: 120px;
+    height: 120px;
     background: transparent;
-    border-radius: 15%;
 }
 
 .sidebar-logo-icon i {
@@ -124,7 +119,6 @@ body.modal-open {
     width: 200%;
     height: 140%;
     object-fit: contain;
-    border-radius: 10%;
 }
 
 .sidebar-logo span {
