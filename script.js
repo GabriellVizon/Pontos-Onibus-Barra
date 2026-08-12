@@ -568,6 +568,10 @@ function updateUserMarker() {
       weight: 2,
       fillColor: '#4caf50',
       fillOpacity: 1,
+      icon: L.icon({
+        iconUrl: 'img/super-heroi.png',
+        iconSize: [32, 32],
+      }),
     }).addTo(state.map).bindPopup('<strong>Sua localização</strong>');
   }
 }

@@ -119,20 +119,11 @@
   {
     "id": 19,
     "ordem": 14,
-    "nome": "Loja Babilônia",
+    "nome": "Morena Loja de Roupas",
     "endereco": "Av. João Paulo II, 805",
     "bairro": "Centro",
     "lat": -22.4655284,
     "lng": -48.5656774
-  },
-  {
-    "id": 20,
-    "ordem": 15,
-    "nome": "OP Informática",
-    "endereco": "Av. João Paulo II",
-    "bairro": "Cohab",
-    "lat": -22.4662309,
-    "lng": -48.5648483
   },
   {
     "id": 21,
@@ -169,15 +160,6 @@
     "bairro": "Sonho Nosso IV",
     "lat": -22.4591652,
     "lng": -48.56804
-  },
-  {
-    "id": 25,
-    "ordem": 20,
-    "nome": "Loja Skate",
-    "endereco": "Av. João Paulo II",
-    "bairro": "Sonho Nosso II",
-    "lat": -22.4655284,
-    "lng": -48.5656774
   },
   {
     "id": 26,
