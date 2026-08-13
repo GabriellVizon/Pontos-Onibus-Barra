@@ -1,4 +1,4 @@
-const CACHE_NAME = 'barrabus-v3';
+const CACHE_NAME = 'barrabus-v5';
 
 const PRE_CACHE_URLS = [
   '/index.html',
@@ -11,9 +11,18 @@ const PRE_CACHE_URLS = [
   '/js/theme.js',
   '/js/favorites.js',
   '/js/modal.js',
+  '/js/appShell.js',
+  '/js/bootstrap-home.js',
+  '/js/bootstrap-points.js',
   '/js/pontos.js',
   '/dados/pontos.json',
-  '/dados/horarios.json'
+  '/dados/horarios.json',
+  '/manifest.json',
+  '/img/icon-192.png',
+  '/img/icon-512.png',
+  '/img/apple-touch-icon.png',
+  '/img/realista-point.png',
+  '/img/realista-point.modoclaro.png'
 ];
 
 self.addEventListener('install', event => {

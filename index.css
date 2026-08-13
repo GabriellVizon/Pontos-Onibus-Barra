@@ -1,10 +1,6 @@
 @import url('css/shared.css');
 
-/* ========== LAYOUT ========== */
-.app-layout {
-    display: flex;
-    min-height: 100vh;
-}
+
 
 /* ========== HERO ========== */
 .hero {
@@ -120,7 +116,7 @@
     letter-spacing: 0.05em;
 }
 .location-value {
-    color: #fff;
+    color: var(--text-primary);
     font-weight: 600;
     font-size: 14px;
 }
@@ -162,22 +158,12 @@
 .section-title {
     font-weight: 700;
     font-size: 16px;
-    color: #fff;
+    color: var(--text-primary);
 }
 .section-subtitle {
     color: var(--text-muted);
     font-size: 12px;
     margin-top: 2px;
-}
-.section-link {
-    color: var(--red);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: color .2s;
-}
-.section-link:hover {
-    color: var(--red-light);
 }
 
 /* ========== CARDS GRID ========== */
@@ -185,227 +171,6 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 16px;
-}
-.results-count {
-    color: var(--text-muted);
-    font-size: 12px;
-    font-weight: 500;
-}
-.card-distance {
-    color: var(--red);
-    font-size: 12px;
-    font-weight: 700;
-}
-.card-line {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 6px 0;
-}
-.card-line + .card-line {
-    border-top: 1px solid var(--border);
-}
-.card-line-name {
-    color: var(--text-secondary);
-    font-size: 11px;
-    font-weight: 500;
-}
-.card-line-time {
-    font-size: 12px;
-    font-weight: 600;
-}
-.card-line-time.now {
-    color: var(--green);
-    background: #1a2e1a;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-weight: 700;
-}
-.card-line-time.waiting {
-    color: var(--text-secondary);
-}
-.card-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin: 0 0 8px;
-}
-.meta-chip {
-    color: var(--text-secondary);
-    background: var(--bg-hover);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-size: 11px;
-    font-weight: 600;
-    padding: 4px 8px;
-}
-.line-meta-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-.chip-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    display: inline-block;
-    flex-shrink: 0;
-    border: 1px solid rgba(255, 255, 255, 0.28);
-}
-.card-horarios {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 6px;
-}
-.card-horarios .time-chip {
-    font-size: 10px;
-    padding: 2px 6px;
-}
-
-/* ========== LINE CARDS ========== */
-.line-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-.line-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-}
-.line-card-title-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.line-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-}
-.line-dot.red {
-    background: var(--red);
-}
-.line-dot.gray {
-    background: var(--text-muted);
-}
-.line-card-title {
-    color: #fff;
-    font-weight: 700;
-    font-size: 15px;
-}
-.line-card-route {
-    color: var(--text-muted);
-    font-size: 11px;
-    margin-bottom: 14px;
-}
-.line-card-schedule-label {
-    color: var(--text-muted);
-    font-size: 10px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 8px;
-}
-.line-card-times {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
-}
-.line-card-progress {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 14px;
-}
-.progress-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-}
-.progress-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-}
-.progress-dot.active {
-    background: var(--red);
-}
-.progress-dot.next {
-    background: var(--border);
-    border: 1px solid #444;
-}
-.progress-text {
-    color: var(--text-secondary);
-}
-.progress-text strong {
-    color: #fff;
-    font-weight: 600;
-}
-.line-card-footer {
-    border-top: 1px solid var(--border);
-    padding-top: 12px;
-}
-.line-card-footer span {
-    color: var(--red);
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-/* ========== ALERT CARD ========== */
-.alert-card {
-    background: linear-gradient(135deg, #7a0000 0%, #5a0000 100%);
-    border: 1px solid #a00000;
-    border-radius: var(--radius-lg);
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-}
-.alert-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-}
-.alert-card-title {
-    color: #fff;
-    font-weight: 700;
-    font-size: 15px;
-}
-.alert-card-header i {
-    color: #ff8a80;
-    font-size: 18px;
-}
-.alert-card-body {
-    color: #ffcdd2;
-    font-size: 12px;
-    line-height: 1.5;
-    margin-bottom: 16px;
-}
-.alert-card-btn {
-    background: rgba(0, 0, 0, 0.3);
-    color: #fff;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 8px 12px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    text-align: center;
-    border: none;
-    font-family: 'Inter', sans-serif;
-    transition: all .2s;
-}
-.alert-card-btn:hover {
-    background: rgba(0, 0, 0, 0.5);
 }
 
 /* ========== MAP SECTION ========== */
@@ -453,7 +218,7 @@
     margin-bottom: 4px;
 }
 .map-overlay-bus {
-    color: #fff;
+    color: var(--text-primary);
     font-weight: 700;
     font-size: 13px;
     margin-bottom: 2px;
@@ -468,27 +233,6 @@
     height: 3px;
     background: var(--red);
     border-radius: 2px;
-}
-.leaflet-popup-content-wrapper,
-.leaflet-popup-tip {
-    background: var(--bg-card);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
-}
-.leaflet-popup-content {
-    margin: 12px;
-    font-family: 'Inter', sans-serif;
-    font-size: 12px;
-}
-.leaflet-popup-content strong {
-    display: block;
-    color: #000000;
-    font-size: 13px;
-    margin-bottom: 4px;
-}
-.leaflet-control-attribution {
-    background: rgba(13, 13, 13, 0.8) !important;
-    color: var(--text-muted) !important;
 }
 .map-status {
     display: flex;
@@ -548,7 +292,7 @@
     font-size: 14px;
 }
 .footer-logo span {
-    color: #fff;
+    color: var(--text-primary);
     font-weight: 700;
     font-size: 16px;
 }
@@ -557,27 +301,6 @@
     font-size: 13px;
     line-height: 1.6;
     margin-bottom: 16px;
-}
-.footer-social {
-    display: flex;
-    gap: 12px;
-}
-.footer-social i {
-    color: var(--text-muted);
-    font-size: 18px;
-    cursor: pointer;
-    transition: color .2s;
-}
-.footer-social i:hover {
-    color: #fff;
-}
-.footer-social a {
-    color: var(--text-muted);
-    text-decoration: none;
-    transition: color .2s;
-}
-.footer-social a:hover {
-    color: #fff;
 }
 .footer-links-group {
     display: flex;
@@ -589,7 +312,7 @@
     gap: 8px;
 }
 .footer-link-title {
-    color: #fff;
+    color: var(--text-primary);
     font-weight: 600;
     font-size: 13px;
     margin-bottom: 4px;
@@ -602,7 +325,7 @@
     text-decoration: none;
 }
 .footer-link:hover {
-    color: #fff;
+    color: var(--text-primary);
 }
 .footer-bottom {
     display: flex;
@@ -613,7 +336,7 @@
     margin-top: 20px;
 }
 .footer-bottom span {
-    color: #444;
+    color: #8a8a8a;
     font-size: 12px;
 }
 
@@ -623,32 +346,6 @@
 }
 [data-theme="light"] .hero-title span {
     color: #c62828;
-}
-[data-theme="light"] .section-title {
-    color: #000000;
-}
-[data-theme="light"] .location-value {
-    color: #000000;
-}
-[data-theme="light"] .line-card-title {
-    color: #000000;
-}
-[data-theme="light"] .progress-text strong {
-    color: #000000;
-}
-[data-theme="light"] .footer-link-title {
-    color: #000000;
-}
-[data-theme="light"] .footer-logo span {
-    color: #000000;
-}
-[data-theme="light"] .footer-link:hover,
-[data-theme="light"] .footer-social i:hover,
-[data-theme="light"] .footer-social a:hover {
-    color: #000000;
-}
-[data-theme="light"] .map-overlay-bus {
-    color: #000000;
 }
 [data-theme="light"] .leaflet-popup-content strong {
     color: #333333;

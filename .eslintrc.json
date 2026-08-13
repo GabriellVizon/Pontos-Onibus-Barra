@@ -1,0 +1,63 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2020": true
+  },
+  "globals": {
+    "L": "readonly",
+    "Favorites": "readonly",
+    "Modal": "readonly",
+    "AppShell": "readonly",
+    "self": "readonly",
+    "caches": "readonly",
+    "clients": "readonly",
+    "escapeHtml": "readonly",
+    "escapeAttr": "readonly",
+    "BUS_COLOR": "readonly",
+    "normalize": "readonly",
+    "toRad": "readonly",
+    "hasCoords": "readonly",
+    "getCurrentDayType": "readonly",
+    "getHorario": "readonly",
+    "getNextDeparture": "readonly",
+    "formatMinutes": "readonly",
+    "formatDistance": "readonly",
+    "distanceKm": "readonly",
+    "pontosComDistancia": "readonly",
+    "hexToRgba": "readonly",
+    "loadCache": "readonly",
+    "saveCache": "readonly",
+    "hideSplash": "readonly",
+    "setupBackToTop": "readonly",
+    "setupOfflineDetection": "readonly",
+    "showEmpty": "readonly",
+    "sortPointsByContext": "readonly",
+    "createDistanceCache": "readonly",
+    "cardClickEffect": "readonly"
+  },
+  "parserOptions": {
+    "ecmaVersion": 2020,
+    "sourceType": "script"
+  },
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-undef": "error",
+    "no-console": "off",
+    "no-var": "off",
+    "no-empty": "off"
+  },
+  "overrides": [
+    {
+      "files": ["js/utils.js"],
+      "rules": {
+        "no-unused-vars": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "node_modules/",
+    "package-lock.json"
+  ]
+}

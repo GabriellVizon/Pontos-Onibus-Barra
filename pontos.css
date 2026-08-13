@@ -21,7 +21,7 @@
 
 /* ========== PAGE HEADER ========== */
 .page-title {
-    color: #fff;
+    color: var(--text-primary);
     font-size: 28px;
     font-weight: 700;
     line-height: 36px;
@@ -35,55 +35,6 @@
     line-height: 20px;
     margin-bottom: 28px;
 }
-
-/* ========== FILTER TAGS ========== */
-.filter-tags {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 28px;
-    flex-wrap: wrap;
-}
-
-.filter-tag {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 9px 18px;
-    border-radius: var(--radius-full);
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all .2s;
-    white-space: nowrap;
-}
-
-.filter-tag.active-tag {
-    background: var(--red);
-    color: #fff;
-}
-
-.filter-tag.inactive-tag {
-    background: var(--bg-card);
-    border: 1px solid var(--border-light);
-    color: var(--text-secondary);
-}
-
-.filter-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-}
-
-.filter-dot.white-dot {
-    background: #fff;
-}
-
-.filter-dot.border-dot {
-    border: 1px solid var(--text-muted);
-}
-
-
 
 /* ========== LINE DETAIL CARD ========== */
 .line-detail-card {
@@ -109,7 +60,7 @@
 }
 
 .line-name {
-    color: #fff;
+    color: var(--text-primary);
     font-size: 26px;
     font-weight: 700;
     line-height: 32px;
@@ -178,7 +129,7 @@
 }
 
 .info-card-value {
-    color: #fff;
+    color: var(--text-primary);
     font-size: 36px;
     font-weight: 700;
     line-height: 40px;
@@ -213,7 +164,7 @@
 }
 
 .schedule-title {
-    color: #fff;
+    color: var(--text-primary);
     font-size: 16px;
     font-weight: 600;
 }
@@ -251,6 +202,17 @@
     color: #fff;
 }
 
+.schedule-sunday-notice {
+    background: var(--bg-card);
+    border: 1px solid var(--red);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+}
+
 .schedule-table {
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -274,13 +236,6 @@
     background: var(--bg-card);
     padding: 10px 20px;
     justify-content: flex-start;
-}
-
-.schedule-hour {
-    width: 80px;
-    color: var(--red);
-    font-size: 15px;
-    font-weight: 600;
 }
 
 .schedule-header-cell {
@@ -311,13 +266,8 @@
     min-width: 40px;
 }
 
-.schedule-time.highlight-time {
-    color: var(--red);
-    font-weight: 600;
-}
-
 .schedule-time.active-time {
-    color: #fff;
+    color: var(--text-primary);
     font-weight: 600;
 }
 
@@ -325,38 +275,6 @@
     margin-top: 12px;
     color: var(--text-muted);
     font-size: 11px;
-}
-
-/* ========== DAY SELECTOR ========== */
-.day-selector {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-}
-
-.day-btn {
-    padding: 8px 14px;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-light);
-    background: var(--bg-card);
-    color: var(--text-secondary);
-    font-family: 'Inter', sans-serif;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all .2s;
-}
-
-.day-btn:hover {
-    border-color: var(--red);
-    color: #fff;
-}
-
-.day-btn.active {
-    background: var(--red);
-    border-color: var(--red);
-    color: #fff;
 }
 
 /* ========== MAP CARD ========== */
@@ -438,7 +356,7 @@
 }
 
 .stops-title {
-    color: #fff;
+    color: var(--text-primary);
     font-size: 16px;
     font-weight: 600;
 }
@@ -469,19 +387,6 @@
     flex-shrink: 0;
 }
 
-.stop-dot.red-dot {
-    background: var(--red);
-}
-
-.stop-dot.gray-dot {
-    background: #4a4a4a;
-}
-
-.stop-dot.pulse-dot {
-    background: var(--red);
-    box-shadow: 0 0 0 4px rgba(229, 57, 53, 0.3);
-}
-
 .stop-dot.colored-dot {
     background: var(--red);
 }
@@ -498,7 +403,7 @@
 }
 
 .stop-name {
-    color: #fff;
+    color: var(--text-primary);
     font-size: 13px;
     font-weight: 500;
 }
@@ -507,19 +412,6 @@
     color: var(--text-muted);
     font-size: 11px;
     margin-top: 2px;
-}
-
-.stop-badge {
-    display: inline-block;
-    background: var(--red);
-    color: #fff;
-    font-size: 10px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: var(--radius-sm);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-top: 4px;
 }
 
 /* ========== FAB ========== */
@@ -582,7 +474,7 @@
 }
 
 .point-card-title {
-    color: #fff;
+    color: var(--text-primary);
     font-size: 15px;
     font-weight: 700;
     line-height: 20px;
@@ -664,19 +556,6 @@
     font-weight: 600;
 }
 
-.point-line-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--text-secondary);
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-full);
-    padding: 4px 9px;
-    font-size: 11px;
-    font-weight: 600;
-}
-
 /* ========== SHOW MORE ========== */
 .show-more-container {
     display: flex;
@@ -699,7 +578,7 @@
 
 .show-more-btn:hover {
     border-color: var(--red);
-    color: #fff;
+    color: var(--text-primary);
 }
 
 /* ========== RESPONSIVE ========== */
@@ -737,11 +616,6 @@
         line-height: 32px;
     }
 
-    .schedule-times {
-        flex-wrap: wrap;
-        gap: 12px;
-    }
-
 }
 
 @media (max-width: 480px) {
@@ -750,46 +624,12 @@
         line-height: 28px;
     }
 
-    .filter-tags {
-        gap: 6px;
-    }
-
-    .filter-tag {
-        padding: 7px 14px;
-        font-size: 12px;
-    }
-
     .schedule-row {
         padding: 10px 12px;
-    }
-
-    .schedule-hour {
-        width: 50px;
-        font-size: 13px;
     }
 }
 
 /* ========== LIGHT THEME OVERRIDES ========== */
-[data-theme="light"] .page-title,
-[data-theme="light"] .line-name,
-[data-theme="light"] .point-card-title,
-[data-theme="light"] .stops-title,
-[data-theme="light"] .stop-name,
-[data-theme="light"] .schedule-title,
-[data-theme="light"] .info-card-value {
-    color: #000000;
-}
-
-[data-theme="light"] .filter-tag.inactive-tag {
-    color: #000000;
-}
-
-
-
-[data-theme="light"] .schedule-time.active-time {
-    color: #000000;
-}
-
 [data-theme="light"] .route-map .leaflet-popup-content-wrapper,
 [data-theme="light"] .route-map .leaflet-popup-tip {
     background: #ffffff;
@@ -798,9 +638,5 @@
 }
 
 [data-theme="light"] .route-map .leaflet-popup-content strong {
-    color: #000000;
-}
-
-[data-theme="light"] .show-more-btn:hover {
     color: #000000;
 }

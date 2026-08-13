@@ -150,9 +150,9 @@
   /* ---- render sections ---- */
 
   function renderHeader(data) {
-    modalEl.querySelector('#modalTitle').textContent = escapeHtml(data.ponto.nome);
+    modalEl.querySelector('#modalTitle').textContent = data.ponto.nome;
     var addrEl = modalEl.querySelector('#modalAddress');
-    if (addrEl) addrEl.textContent = escapeHtml(data.ponto.endereco);
+    if (addrEl) addrEl.textContent = data.ponto.endereco;
     var favBtn = modalEl.querySelector('#modalFavBtn');
     favBtn.setAttribute('data-id', data.ponto.id);
     favBtn.classList.toggle('favorited', !!data.isFav);
@@ -232,7 +232,10 @@
   function renderScheduleTab(el, data) {
     var horarios = data.horarios;
     if (!horarios || horarios.length === 0) {
-      el.innerHTML = '<p class="tab-empty">Nenhum hor&aacute;rio dispon&iacute;vel.</p>';
+      var emptyMsg = getCurrentDayType() === 'domingo'
+        ? 'Não há operação aos domingos.'
+        : 'Nenhum horário disponível.';
+      el.innerHTML = '<p class="tab-empty">' + escapeHtml(emptyMsg) + '</p>';
       return;
     }
     var nextTime = data.next ? data.next.time : null;

@@ -90,16 +90,16 @@
     "lng": -48.5649971
   },
   {
-    "id": 16,
+    "id": 11,
     "ordem": 11,
-    "nome": "Boca Rica (Em Frente)",
-    "endereco": "Rua Domingos Ghedin",
+    "nome": "Prédio da Marinha",
+    "endereco": "Av. Nove de Julho, 533",
     "bairro": "Vila Correia",
-    "lat": -22.4913627,
-    "lng": -48.5471219
+    "lat": -22.4886608,
+    "lng": -48.564664
   },
   {
-    "id": 17,
+    "id": 12,
     "ordem": 12,
     "nome": "Pracinha Lojas São Paulo",
     "endereco": "Rua Antonio Dario",
@@ -108,7 +108,7 @@
     "lng": -48.5664472
   },
   {
-    "id": 18,
+    "id": 13,
     "ordem": 13,
     "nome": "Sinal Verde",
     "endereco": "Av. João Paulo II",
@@ -117,7 +117,7 @@
     "lng": -48.5607924
   },
   {
-    "id": 19,
+    "id": 14,
     "ordem": 14,
     "nome": "Morena Loja de Roupas",
     "endereco": "Av. João Paulo II, 805",
@@ -126,8 +126,8 @@
     "lng": -48.5656774
   },
   {
-    "id": 21,
-    "ordem": 16,
+    "id": 15,
+    "ordem": 15,
     "nome": "Banca de Calçados",
     "endereco": "Rua João Morelatto",
     "bairro": "Sonho Nosso",
@@ -135,8 +135,8 @@
     "lng": -48.5631282
   },
   {
-    "id": 22,
-    "ordem": 17,
+    "id": 16,
+    "ordem": 16,
     "nome": "Bar do Amaral",
     "endereco": "Rua Armando Moretti, 429",
     "bairro": "Sonho Nosso IV",
@@ -144,8 +144,8 @@
     "lng": -48.5655249
   },
   {
-    "id": 23,
-    "ordem": 18,
+    "id": 17,
+    "ordem": 17,
     "nome": "Esquina com Armando Moretti",
     "endereco": "R. Arlindo Santille",
     "bairro": "Sonho Nosso IV",
@@ -153,8 +153,8 @@
     "lng": -48.5658353
   },
   {
-    "id": 24,
-    "ordem": 19,
+    "id": 18,
+    "ordem": 18,
     "nome": "Rotatória Vitória 1",
     "endereco": "R. Linda Cavalari",
     "bairro": "Sonho Nosso IV",
@@ -162,8 +162,8 @@
     "lng": -48.56804
   },
   {
-    "id": 26,
-    "ordem": 21,
+    "id": 19,
+    "ordem": 19,
     "nome": "Prime Store",
     "endereco": "Av. Dionísio Dutra e Silva",
     "bairro": "Cohab",
@@ -171,8 +171,8 @@
     "lng": -48.5671293
   },
   {
-    "id": 27,
-    "ordem": 22,
+    "id": 20,
+    "ordem": 20,
     "nome": "Lanches",
     "endereco": "Av. Dionísio Dutra e Silva, 457",
     "bairro": "Cohab",
@@ -180,8 +180,8 @@
     "lng": -48.5682736
   },
   {
-    "id": 28,
-    "ordem": 23,
+    "id": 21,
+    "ordem": 21,
     "nome": "Incubadora",
     "endereco": "Av. Dionísio Dutra e Silva, 241",
     "bairro": "Cohab",
@@ -189,8 +189,8 @@
     "lng": -48.5692824
   },
   {
-    "id": 29,
-    "ordem": 24,
+    "id": 22,
+    "ordem": 22,
     "nome": "Biscoitos Fofinho",
     "endereco": "Av. Industrial, 1329. Dr. José Erineu Ortigosa",
     "bairro": "Distrito Industrial",
@@ -198,8 +198,8 @@
     "lng": -48.5689741
   },
   {
-    "id": 30,
-    "ordem": 25,
+    "id": 23,
+    "ordem": 23,
     "nome": "Dierberg",
     "endereco": "Av. Industrial, 827",
     "bairro": "Distrito Industrial",
@@ -207,8 +207,8 @@
     "lng": -48.5677029
   },
   {
-    "id": 31,
-    "ordem": 26,
+    "id": 24,
+    "ordem": 24,
     "nome": "Cerâmica Lourenção",
     "endereco": "Av. Industrial, 321",
     "bairro": "Distrito Industrial",
@@ -216,8 +216,8 @@
     "lng": -48.5658843
   },
   {
-    "id": 32,
-    "ordem": 27,
+    "id": 25,
+    "ordem": 25,
     "nome": "Padaria Barão",
     "endereco": "Rua João Pessoa, 464",
     "bairro": "Vila Nova",
@@ -225,8 +225,8 @@
     "lng": -48.5637664
   },
   {
-    "id": 33,
-    "ordem": 28,
+    "id": 26,
+    "ordem": 26,
     "nome": "Depósito Prospel",
     "endereco": "Rua João Pessoa, 293",
     "bairro": "Vila Nova",
@@ -234,8 +234,8 @@
     "lng": -48.5643362
   },
   {
-    "id": 34,
-    "ordem": 29,
+    "id": 27,
+    "ordem": 27,
     "nome": "Sorveteria (Em Frente)",
     "endereco": "Rua Prudente de Morais",
     "bairro": "Centro",
@@ -243,8 +243,8 @@
     "lng": -48.5607349
   },
   {
-    "id": 35,
-    "ordem": 30,
+    "id": 28,
+    "ordem": 28,
     "nome": "Igreja Matriz São José",
     "endereco": "Rua Prudente de Morais, 756",
     "bairro": "Centro",
@@ -252,8 +252,8 @@
     "lng": -48.5583633
   },
   {
-    "id": 36,
-    "ordem": 31,
+    "id": 29,
+    "ordem": 29,
     "nome": "Hospital",
     "endereco": "Rua Rio Branco, 301",
     "bairro": "Centro",
@@ -261,8 +261,8 @@
     "lng": -48.55645
   },
   {
-    "id": 37,
-    "ordem": 32,
+    "id": 30,
+    "ordem": 30,
     "nome": "Posto do Frollini",
     "endereco": "Av. João da Silva Nogueira",
     "bairro": "Centro",
@@ -270,8 +270,8 @@
     "lng": -48.5517277
   },
   {
-    "id": 38,
-    "ordem": 33,
+    "id": 31,
+    "ordem": 31,
     "nome": "Orquidário",
     "endereco": "Av. João da Silva Nogueira",
     "bairro": "Centro",
@@ -279,8 +279,8 @@
     "lng": -48.5405268
   },
   {
-    "id": 39,
-    "ordem": 34,
+    "id": 32,
+    "ordem": 32,
     "nome": "Hotel Estância",
     "endereco": "Av. João da Silva Nogueira",
     "bairro": "Centro",

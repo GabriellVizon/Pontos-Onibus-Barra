@@ -36,24 +36,13 @@
                         '<span>BarraBus</span>' +
                     '</div>' +
                     '<p class="footer-desc">Simplificando o transporte público em Barra Bonita com dados precisos e tecnologia de ponta.</p>' +
-                    '<div class="footer-social">' +
-                        '<a href="#" target="_blank" rel="noopener noreferrer" aria-label="Compartilhar"><i class="ti ti-share"></i></a>' +
-                        '<a href="#" target="_blank" rel="noopener noreferrer" aria-label="Site"><i class="ti ti-world"></i></a>' +
-                    '</div>' +
                 '</div>' +
                 '<div class="footer-links-group">' +
                     '<div class="footer-link-col">' +
                         '<span class="footer-link-title">NAVEGAÇÃO</span>' +
-                        '<a href="#inicio" class="footer-link">Home</a>' +
+                        '<a href="index.html" class="footer-link">Home</a>' +
                         '<a href="pontos.html" class="footer-link">Horários</a>' +
-                        '<a href="#mapa" class="footer-link">Mapa</a>' +
-                        '<a href="pontos.html" class="footer-link">Horários</a>' +
-                    '</div>' +
-                    '<div class="footer-link-col">' +
-                        '<span class="footer-link-title">SUPORTE</span>' +
-                        '<a href="#" class="footer-link">FAQ</a>' +
-                        '<a href="#" class="footer-link">Contato</a>' +
-                        '<a href="#" class="footer-link">Termos</a>' +
+                        '<a href="index.html#mapa" class="footer-link">Mapa</a>' +
                     '</div>' +
                 '</div>' +
             '</div>' +

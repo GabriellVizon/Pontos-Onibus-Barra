@@ -363,7 +363,7 @@ function renderFavoriteStops() {
     lista.filter(function (p) { return favIds.indexOf(String(p.id)) !== -1; }),
     sortMode
   );
-  els.favStops.innerHTML = favPontos.map(function (p) { return renderStopCard(p, { compact: true }); }).join('');
+  els.favStops.innerHTML = favPontos.map(function (p) { return renderStopCard(p); }).join('');
 }
 
 function renderNearbyStops() {
@@ -388,11 +388,11 @@ function renderNearbyStops() {
   }
 
   els.nearbyStops.innerHTML = nearby
-    .map((ponto) => renderStopCard(ponto, { compact: true }))
+    .map((ponto) => renderStopCard(ponto))
     .join('');
 }
 
-function renderStopCard(ponto, options = {}) {
+function renderStopCard(ponto) {
   const next = getNextDeparture(state.horarios);
   const horariosLinha = getHorario(state.horarios, getCurrentDayType());
   const distanceText = typeof ponto.distancia === 'number'
@@ -489,6 +489,22 @@ function createLineMarker(lat, lng) {
   });
 }
 
+function enableMarkerKeyboard(marker, ponto, onActivate) {
+  marker.on('add', function () {
+    const el = marker.getElement();
+    if (!el) return;
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('aria-label', ponto.nome + ' - ' + ponto.endereco);
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onActivate(ponto);
+      }
+    });
+  });
+}
+
 function renderMapMarkers() {
   if (!state.map || !state.markerLayer) return;
 
@@ -505,6 +521,7 @@ function renderMapMarkers() {
       `)
       .on('click', function () { openStopModal(ponto.id); });
 
+    enableMarkerKeyboard(marker, ponto, openStopModal);
     marker.addTo(state.markerLayer);
     state.markers.set(ponto.id, marker);
   });
@@ -559,21 +576,22 @@ function requestUserLocation(options = {}) {
 function updateUserMarker() {
   if (!state.map || !state.userPosition) return;
 
+  const latLng = [state.userPosition.lat, state.userPosition.lng];
   if (state.userMarker) {
-    state.userMarker.setLatLng([state.userPosition.lat, state.userPosition.lng]);
-  } else {
-    state.userMarker = L.circleMarker([state.userPosition.lat, state.userPosition.lng], {
-      radius: 8,
-      color: '#ffffff',
-      weight: 2,
-      fillColor: '#4caf50',
-      fillOpacity: 1,
-      icon: L.icon({
-        iconUrl: 'img/super-heroi.png',
-        iconSize: [32, 32],
-      }),
-    }).addTo(state.map).bindPopup('<strong>Sua localização</strong>');
+    state.userMarker.setLatLng(latLng);
+    return;
   }
+
+  state.userMarker = L.marker(latLng, {
+    icon: L.icon({
+      iconUrl: 'img/do-utilizador.png',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+      popupAnchor: [0, -14],
+    }),
+    zIndexOffset: 1000,
+    title: 'Sua localização',
+  }).addTo(state.map).bindPopup('<strong>Sua localização</strong>');
 }
 
 function updateLocationSummary() {

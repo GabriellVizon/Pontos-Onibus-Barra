@@ -82,26 +82,7 @@
                 hideSplash();
             }
 
-            var responses = await Promise.all([
-                fetch('./dados/pontos.json'),
-                fetch('./dados/horarios.json')
-            ]);
-
-            if (responses.some(function (response) { return !response.ok; })) {
-                throw new Error('Falha ao carregar os arquivos JSON.');
-            }
-
-            var data = await Promise.all(responses.map(function (response) { return response.json(); }));
-            state.pontos = data[0];
-            state.horarios = data[1];
-            if (state.distanceCache) state.distanceCache.invalidate();
-
-            saveCache(state.pontos, state.horarios);
-
-            if (typeof Favorites !== 'undefined') {
-                Favorites.pruneFavorites(state.pontos.map(function (p) { return p.id; }));
-            }
-
+            await loadData();
             initModalOnce();
             renderSchedule();
             initMap();
@@ -124,12 +105,46 @@
                 requestLocation();
             } else {
                 if (els.pointsGrid) {
-                    els.pointsGrid.innerHTML = '<div class="empty-state">Nao foi possivel carregar os pontos. Abra a pagina por um servidor local para o fetch funcionar.</div>';
+                    els.pointsGrid.innerHTML = '<div class="empty-state">Não foi possível carregar os pontos. Abra a página por um servidor local para o fetch funcionar.</div>';
                 }
                 if (els.pageSubtitle) els.pageSubtitle.textContent = 'Erro ao carregar os dados dos pontos.';
             }
         }
         hideSplash();
+    }
+
+    function loadData() {
+        return Promise.all([
+            fetch('./dados/pontos.json'),
+            fetch('./dados/horarios.json')
+        ]).then(function (responses) {
+            if (responses.some(function (response) { return !response.ok; })) {
+                throw new Error('Falha ao carregar os arquivos JSON.');
+            }
+            return Promise.all(responses.map(function (response) { return response.json(); }));
+        }).then(function (data) {
+            state.pontos = data[0];
+            state.horarios = data[1];
+            if (state.distanceCache) state.distanceCache.invalidate();
+            saveCache(state.pontos, state.horarios);
+            if (typeof Favorites !== 'undefined') {
+                Favorites.pruneFavorites(state.pontos.map(function (p) { return p.id; }));
+            }
+        });
+    }
+
+    function refresh() {
+        var splash = document.getElementById('splash');
+        if (splash) splash.classList.remove('hide');
+        loadData().then(function () {
+            renderSchedule();
+            renderMapMarkers();
+            render();
+            requestLocation();
+            hideSplash();
+        }).catch(function () {
+            hideSplash();
+        });
     }
 
     function bindEvents() {
@@ -232,8 +247,7 @@
         var fabBtn = document.getElementById('fabBtn');
         if (fabBtn) {
             fabBtn.addEventListener('click', function () {
-                requestLocation();
-                render();
+                refresh();
             });
 
             const searchIcon = document.querySelector('#searchBox .ti-search');
@@ -290,7 +304,7 @@
             return;
         }
 
-        var results = getFilteredPoints('all').filter(function (ponto) {
+        var results = getFilteredPoints().filter(function (ponto) {
             return normalize([ponto.nome, ponto.endereco, ponto.bairro].join(' ')).includes(term);
         }).slice(0, 10);
 
@@ -337,8 +351,8 @@
 
         if (els.pageSubtitle) {
             els.pageSubtitle.textContent = state.userPosition
-                ? 'Listando os pontos por distancia, ordem e busca.'
-                : 'Permita a localizacao para destacar os pontos mais proximos.';
+                ? 'Listando os pontos por distância, ordem e busca.'
+                : 'Permita a localização para destacar os pontos mais próximos.';
         }
 
         if (!els.pointsGrid) return;
@@ -392,7 +406,7 @@
             '</div>',
             '<p class="point-address">' + escapeHtml(ponto.endereco) + '</p>',
             '<div class="point-next-bus">',
-            '<span class="point-next-label"><i class="ti ti-bus"></i> Proximo onibus</span>',
+            '<span class="point-next-label"><i class="ti ti-bus"></i> Próximo ônibus</span>',
             '<span class="point-next-time ' + nextClass + '">' + escapeHtml(next.label) + '</span>',
             '</div>',
             '<div class="point-meta">',
@@ -524,6 +538,22 @@
         });
     }
 
+    function enableMarkerKeyboard(marker, ponto, onActivate) {
+        marker.on('add', function () {
+            var el = marker.getElement();
+            if (!el) return;
+            el.setAttribute('role', 'button');
+            el.setAttribute('tabindex', '0');
+            el.setAttribute('aria-label', ponto.nome + ' - ' + ponto.endereco);
+            el.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onActivate(ponto);
+                }
+            });
+        });
+    }
+
     function renderMapMarkers() {
         if (!state.map || !state.markerLayer) return;
 
@@ -541,6 +571,7 @@
                     openPointModal(ponto.id);
                 });
 
+            enableMarkerKeyboard(marker, ponto, openPointModal);
             marker.addTo(state.markerLayer);
             state.markers.set(ponto.id, marker);
         });
@@ -594,8 +625,8 @@
 
     function buildScheduleTabs() {
         var tabsHtml = '<div class="schedule-tabs">' +
-            '<button class="schedule-tab' + (state.scheduleTab === 'uteis' ? ' active' : '') + '" data-tab="uteis">Dias Uteis</button>' +
-            '<button class="schedule-tab' + (state.scheduleTab === 'sabado' ? ' active' : '') + '" data-tab="sabado">Sabado</button>' +
+            '<button class="schedule-tab' + (state.scheduleTab === 'uteis' ? ' active' : '') + '" data-tab="uteis">Dias Úteis</button>' +
+            '<button class="schedule-tab' + (state.scheduleTab === 'sabado' ? ' active' : '') + '" data-tab="sabado">Sábado</button>' +
             '</div>';
         return tabsHtml;
     }
@@ -614,9 +645,17 @@
 
         var horarios = getHorario(state.horarios, state.scheduleTab);
         var html = buildScheduleTabs();
+        var todayIsSunday = getCurrentDayType() === 'domingo';
+
+        if (todayIsSunday) {
+            html = '<div class="schedule-sunday-notice">Hoje é domingo &mdash; n&atilde;o h&aacute; opera&ccedil;&atilde;o de &ocirc;nibus em Barra Bonita. A tabela abaixo &eacute; de refer&ecirc;ncia para consulta.</div>' + html;
+        }
 
         if (horarios.length === 0) {
-            html += '<div class="schedule-row"><span class="schedule-time">Sem horarios para ' + (state.scheduleTab === 'uteis' ? 'dias uteis' : 'sabado') + '.</span></div>';
+            var emptyMsg = todayIsSunday
+                ? 'Domingo n&atilde;o h&aacute; opera&ccedil;&atilde;o. Os hor&aacute;rios nas abas s&atilde;o apenas de refer&ecirc;ncia.'
+                : 'Sem hor&aacute;rios para ' + (state.scheduleTab === 'uteis' ? 'dias &uacute;teis' : 's&aacute;bado') + '.';
+            html += '<div class="schedule-row"><span class="schedule-time">' + emptyMsg + '</span></div>';
             els.scheduleTable.innerHTML = html;
             bindScheduleTabs();
             return;
@@ -638,7 +677,13 @@
         bindScheduleTabs();
 
         if (els.scheduleNote) {
-            els.scheduleNote.textContent = nextTime ? 'Horario destacado indica a proxima saida.' : 'Selecione um ponto para ver a proxima saida.';
+            if (todayIsSunday) {
+                els.scheduleNote.textContent = 'Hoje é domingo e não há operação. A tabela mostra os horários de referência.';
+            } else if (nextTime) {
+                els.scheduleNote.textContent = 'Horário destacado indica a próxima saída.';
+            } else {
+                els.scheduleNote.textContent = 'Selecione um ponto para ver a próxima saída.';
+            }
         }
     }
 
@@ -660,7 +705,7 @@
         });
     }
 
-    function getFilteredPoints(forceFilter) {
+    function getFilteredPoints() {
         var term = normalize(els.searchInput ? els.searchInput.value : '');
         var lista = state.distanceCache ? state.distanceCache.getAll() : pontosComDistancia(state.pontos, state.userPosition);
 

@@ -52,7 +52,9 @@ function getHorario(horarios, dayType) {
 function getNextDeparture(horarios) {
   var horariosLinha = getHorario(horarios);
   if (horariosLinha.length === 0) {
-    return { time: '--', label: 'Sem horário', minutes: Number.POSITIVE_INFINITY };
+    var dayType = getCurrentDayType();
+    var label = dayType === 'domingo' ? 'Não opera aos domingos' : 'Sem horário';
+    return { time: '--', label: label, minutes: Number.POSITIVE_INFINITY };
   }
 
   var now = new Date();

@@ -1,9 +1,17 @@
 (function () {
   var STORAGE_KEY = 'busTheme';
 
+  var LOGO_DARK = 'img/realista-point.png';
+  var LOGO_LIGHT = 'img/realista-point.modoclaro.png';
+
   function getTheme() {
     try { return localStorage.getItem(STORAGE_KEY) || 'dark'; }
     catch (e) { return 'dark'; }
+  }
+
+  function applyLogo(theme) {
+    var img = document.querySelector('.sidebar-logo-icon img');
+    if (img) img.src = theme === 'light' ? LOGO_LIGHT : LOGO_DARK;
   }
 
   function setTheme(theme) {
@@ -17,6 +25,7 @@
       }
       btn.setAttribute('aria-label', theme === 'light' ? 'Modo escuro' : 'Modo claro');
     }
+    applyLogo(theme);
   }
 
   function toggle() {
