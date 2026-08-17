@@ -50,6 +50,15 @@
         setupBackToTop();
         setupOfflineDetection();
 
+        if (typeof Reminders !== 'undefined') {
+            Reminders.init({
+                onFire: function (reminder) {
+                    showToast('Lembrete: ' + reminder.stopName + ' — ônibus das ' + reminder.departure + ' em ' + reminder.minutesBefore + ' min.');
+                }
+            });
+        }
+        setInterval(refreshLiveDepartures, 30000);
+
         var cached = loadCache();
         var modalInited = false;
         function initModalOnce() {
@@ -752,6 +761,24 @@
     function markSelectedCard() {
         document.querySelectorAll('[data-point-id]').forEach(function (card) {
             card.classList.toggle('selected', Number(card.dataset.pointId) === state.selectedPointId);
+        });
+    }
+
+    function refreshLiveDepartures() {
+        if (!state.horarios) return;
+        var next = getNextDeparture(state.horarios);
+
+        document.querySelectorAll('.point-next-time').forEach(function (el) {
+            el.textContent = next.label;
+            el.className = 'point-next-time ' + (next.minutes <= 5 ? 'now' : 'waiting');
+        });
+
+        if (els.selectedNext && state.selectedPointId != null) {
+            els.selectedNext.textContent = next.label;
+        }
+
+        document.querySelectorAll('.schedule-time').forEach(function (el) {
+            el.classList.toggle('active-time', el.textContent.trim() === next.time);
         });
     }
 

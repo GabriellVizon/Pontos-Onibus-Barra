@@ -24,7 +24,8 @@ css/pontos.css  → Estilos da página Pontos
 js/utils.js     → Funções puras (distância, horários, cache, helpers)
 js/theme.js     → Tema claro/escuro
 js/favorites.js → Favoritos (localStorage)
-js/modal.js     → Modal de detalhe do ponto (com mini-mapa e percurso)
+js/reminders.js → Lembretes de ônibus (Notification + fallback em toast)
+js/modal.js     → Modal de detalhe do ponto (com mini-mapa, percurso e próximas saídas)
 js/appShell.js  → Shell da página (sidebar, topbar, splash, footer)
 js/bootstrap-home.js / bootstrap-points.js → Renderizam o shell por página
 js/pontos.js    → Lógica da página Pontos
@@ -53,3 +54,5 @@ npm run lint # roda o ESLint em todo o JS
 - Não há build step: o JS roda direto no navegador, então não introduza sintaxe acima de ES2020 sem verificar compatibilidade.
 - Ao mudar assets/arquivos que devem ficar offline, atualize `PRE_CACHE_URLS` no `sw.js` e aumente `CACHE_NAME`.
 - Troca de tema: as cores vêm de variáveis CSS em `css/shared.css` (`[data-theme="light"]` redefine as variáveis). Evite cores fixas (`#fff`/`#000`) nos componentes; prefira `var(--text-primary)`.
+- Próximas saídas: os cards, o modal e o resumo da home se atualizam a cada 30s (`refreshLiveDepartures` / `updateLive`).
+- Lembretes: agendados por `js/reminders.js` via `Notification`. Disparam **somente com o app/aba aberto** (sem servidor de push); com permissão negada, cai em um toast interno.

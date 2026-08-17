@@ -783,6 +783,127 @@ body.modal-open {
     color: var(--text-primary);
 }
 
+/* Modal Reminders */
+.modal-reminder-wrap {
+    margin-top: 2px;
+}
+
+.reminder-inline {
+    background: var(--bg-card);
+    border: 1px dashed var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+}
+
+.reminder-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.reminder-label i {
+    color: var(--red);
+}
+
+.reminder-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.reminder-opt {
+    flex: 1;
+    min-width: 60px;
+    padding: 8px 0;
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+}
+
+.reminder-opt:hover {
+    border-color: var(--red);
+    color: var(--red-light);
+}
+
+.reminder-active {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--red);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.reminder-active i {
+    color: var(--red);
+}
+
+.reminder-cancel {
+    margin-left: auto;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid var(--border-light);
+    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+}
+
+.reminder-cancel:hover {
+    border-color: var(--red);
+    color: var(--red);
+}
+
+.reminder-unavailable {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* Toast */
+.app-toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translate(-50%, 20px);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border-light);
+    border-left: 4px solid var(--red);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s, transform .25s;
+    z-index: 3000;
+    max-width: calc(100vw - 32px);
+}
+
+.app-toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+    pointer-events: auto;
+}
+
 /* Modal Mini Map */
 .modal-map-wrap {
     border-radius: var(--radius-lg);

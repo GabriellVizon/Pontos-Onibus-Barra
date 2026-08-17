@@ -35,7 +35,13 @@
     "showEmpty": "readonly",
     "sortPointsByContext": "readonly",
     "createDistanceCache": "readonly",
-    "cardClickEffect": "readonly"
+    "cardClickEffect": "readonly",
+    "getNextDepartures": "readonly",
+    "timeToMinutes": "readonly",
+    "nextOccurrenceDate": "readonly",
+    "reminderTriggerDate": "readonly",
+    "showToast": "readonly",
+    "Reminders": "readonly"
   },
   "parserOptions": {
     "ecmaVersion": 2020,

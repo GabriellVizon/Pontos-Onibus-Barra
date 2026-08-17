@@ -47,6 +47,15 @@ async function init() {
   setupBackToTop();
   setupOfflineDetection();
 
+  if (typeof Reminders !== 'undefined') {
+    Reminders.init({
+      onFire: function (reminder) {
+        showToast('Lembrete: ' + reminder.stopName + ' — ônibus das ' + reminder.departure + ' em ' + reminder.minutesBefore + ' min.');
+      }
+    });
+  }
+  setInterval(refreshLiveDepartures, 30000);
+
   var cached = loadCache();
   var modalInited = false;
   function initModalOnce() {
@@ -687,4 +696,32 @@ function setLocationStatus(location, nearest, departure) {
   if (els.userLocationText) els.userLocationText.textContent = location;
   if (els.nearestStopText) els.nearestStopText.textContent = nearest;
   if (els.nextDepartureText) els.nextDepartureText.textContent = departure;
+}
+
+function refreshLiveDepartures() {
+  if (!state.horarios) return;
+  const next = getNextDeparture(state.horarios);
+
+  if (els.nextDepartureText && els.nextDepartureText.textContent !== '--') {
+    els.nextDepartureText.textContent = next.label;
+  }
+
+  document.querySelectorAll('.stop-card').forEach((card) => {
+    const timeEl = card.querySelector('.card-next-time');
+    if (timeEl) {
+      timeEl.textContent = next.label;
+      timeEl.classList.remove('now', 'waiting');
+      timeEl.classList.add(next.minutes <= 5 ? 'now' : 'waiting');
+    }
+    card.querySelectorAll('.time-chip').forEach((chip) => {
+      chip.classList.toggle('active', chip.textContent.trim() === next.time);
+    });
+  });
+
+  if (state.selectedStopId && els.selectedStopDetails) {
+    const ponto = state.pontos.find((p) => p.id === state.selectedStopId);
+    if (ponto && hasCoords(ponto)) {
+      els.selectedStopDetails.textContent = `${ponto.endereco} - próxima saída ${next.label}`;
+    }
+  }
 }

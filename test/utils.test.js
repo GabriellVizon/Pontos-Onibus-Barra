@@ -78,6 +78,58 @@ test('getNextDeparture retorna uma próxima saída válida', () => {
   assert.strictEqual(typeof next.label, 'string');
 });
 
+test('getNextDepartures retorna a quantidade pedida, ordenada', () => {
+  const h = { uteis: ['06:00', '12:00', '18:00'], sabado: [], domingo: [] };
+  const list = getNextDepartures(h, 3);
+  assert.strictEqual(list.length, 3);
+  assert.ok(list[0].minutes <= list[1].minutes);
+  assert.ok(list[1].minutes <= list[2].minutes);
+});
+
+test('getNextDepartures com limite menor devolve menos itens', () => {
+  const h = { uteis: ['06:00', '12:00'], sabado: [], domingo: [] };
+  assert.strictEqual(getNextDepartures(h, 5).length, 2);
+});
+
+test('getNextDepartures no domingo informa que não opera', () => {
+  const h = { uteis: ['06:00'], sabado: [], domingo: [] };
+  const list = getNextDepartures(h, 3);
+  if (list[0].time === '--') {
+    assert.ok(list[0].label.indexOf('domingo') !== -1 || list[0].label.indexOf('Sem horário') !== -1);
+  } else {
+    assert.strictEqual(typeof list[0].time, 'string');
+  }
+});
+
+test('timeToMinutes converte hora em minutos', () => {
+  assert.strictEqual(timeToMinutes('06:15'), 375);
+  assert.strictEqual(timeToMinutes('00:00'), 0);
+  assert.strictEqual(timeToMinutes('23:59'), 1439);
+  assert.strictEqual(timeToMinutes('abc'), null);
+});
+
+test('nextOccurrenceDate devolve o próximo horário no futuro', () => {
+  const from = new Date(2026, 0, 15, 12, 0, 0);
+  const sameDay = nextOccurrenceDate(13 * 60, from);
+  assert.strictEqual(sameDay.getDate(), 15);
+  assert.strictEqual(sameDay.getHours(), 13);
+
+  const past = nextOccurrenceDate(11 * 60, from);
+  assert.strictEqual(past.getDate(), 16);
+  assert.strictEqual(past.getHours(), 11);
+});
+
+test('reminderTriggerDate calcula o gatilho antes do embarque', () => {
+  const from = new Date(2026, 0, 15, 12, 0, 0);
+  const trigger = reminderTriggerDate('13:15', 10);
+  assert.ok(trigger instanceof Date);
+  assert.ok(trigger.getTime() > from.getTime());
+  assert.strictEqual(trigger.getHours(), 13);
+  assert.strictEqual(trigger.getMinutes(), 5);
+  assert.strictEqual(reminderTriggerDate('xx', 5), null);
+  assert.strictEqual(reminderTriggerDate('13:15', 'abc'), null);
+});
+
 test('getNextDeparture no domingo informa que não opera', () => {
   const h = { uteis: ['06:00'], sabado: [], domingo: [] };
   const next = getNextDeparture(h);

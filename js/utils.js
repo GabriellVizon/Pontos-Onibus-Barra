@@ -49,12 +49,12 @@ function getHorario(horarios, dayType) {
   return (horarios[day] && Array.isArray(horarios[day])) ? horarios[day] : [];
 }
 
-function getNextDeparture(horarios) {
+function getNextDepartures(horarios, count) {
   var horariosLinha = getHorario(horarios);
   if (horariosLinha.length === 0) {
     var dayType = getCurrentDayType();
     var label = dayType === 'domingo' ? 'Não opera aos domingos' : 'Sem horário';
-    return { time: '--', label: label, minutes: Number.POSITIVE_INFINITY };
+    return [{ time: '--', label: label, minutes: Number.POSITIVE_INFINITY }];
   }
 
   var now = new Date();
@@ -70,12 +70,42 @@ function getNextDeparture(horarios) {
     })
     .sort(function (a, b) { return a.diff - b.diff; });
 
-  var next = departures[0];
-  return {
-    time: next.time,
-    label: formatMinutes(next.diff, next.time),
-    minutes: next.diff,
-  };
+  var limit = typeof count === 'number' && Number.isFinite(count) ? Math.max(1, Math.floor(count)) : 3;
+  return departures.slice(0, limit).map(function (next) {
+    return {
+      time: next.time,
+      label: formatMinutes(next.diff, next.time),
+      minutes: next.diff,
+    };
+  });
+}
+
+function getNextDeparture(horarios) {
+  return getNextDepartures(horarios, 1)[0];
+}
+
+function timeToMinutes(timeStr) {
+  var parts = String(timeStr || '').split(':').map(Number);
+  if (parts.length < 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) return null;
+  return parts[0] * 60 + parts[1];
+}
+
+function nextOccurrenceDate(minutesOfDay, from) {
+  var base = from instanceof Date ? new Date(from.getTime()) : new Date();
+  var total = ((Math.floor(minutesOfDay) % 1440) + 1440) % 1440;
+  var candidate = new Date(base.getFullYear(), base.getMonth(), base.getDate(), Math.floor(total / 60), total % 60, 0, 0);
+  if (candidate.getTime() <= base.getTime()) {
+    candidate.setDate(candidate.getDate() + 1);
+  }
+  return candidate;
+}
+
+function reminderTriggerDate(departureTime, minutesBefore) {
+  var dep = timeToMinutes(departureTime);
+  var before = Number(minutesBefore);
+  if (dep == null || !Number.isFinite(before)) return null;
+  var triggerMinutes = ((dep - Math.max(0, Math.floor(before))) % 1440 + 1440) % 1440;
+  return nextOccurrenceDate(triggerMinutes);
 }
 
 function formatMinutes(minutes, time) {
@@ -177,6 +207,23 @@ function setupOfflineDetection() {
 function showEmpty(container, message) {
   if (!container) return;
   container.innerHTML = '<div class="empty-state">' + escapeHtml(message) + '</div>';
+}
+
+function showToast(message) {
+  var toast = document.getElementById('appToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'appToast';
+    toast.className = 'app-toast';
+    toast.setAttribute('role', 'status');
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(toast._hideTimer);
+  toast._hideTimer = setTimeout(function () {
+    toast.classList.remove('show');
+  }, 4000);
 }
 
 function sortPointsByContext(lista, sortMode) {

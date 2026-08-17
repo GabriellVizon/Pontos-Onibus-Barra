@@ -5,6 +5,7 @@
   var onFavToggleCallback = null;
   var currentData = null;
   var currentTab = 'horarios';
+  var liveTimer = null;
 
   function init(options) {
     onCloseCallback = options && options.onClose ? options.onClose : null;
@@ -33,6 +34,7 @@
           '<div class="modal-section modal-next-bus" id="modalNextBus"></div>' +
           '<div class="modal-section modal-info-row" id="modalInfoRow"></div>' +
           '<div class="modal-section modal-actions-row" id="modalActions"></div>' +
+          '<div class="modal-section modal-reminder-wrap" id="modalReminderWrap"></div>' +
           '<div class="modal-section modal-map-wrap" id="modalMapWrap">' +
             '<div class="modal-mini-map" id="modalMiniMap"></div>' +
           '</div>' +
@@ -126,6 +128,7 @@
     renderNextBus(data);
     renderInfoRow(data);
     renderActions(data);
+    renderReminderState(data);
     renderTabContent(data, 'horarios');
 
     requestAnimationFrame(function () {
@@ -135,6 +138,12 @@
       if (closeBtn) closeBtn.focus();
     });
 
+    clearInterval(liveTimer);
+    liveTimer = setInterval(function () {
+      if (!isOpen() || !currentData) return;
+      updateLive();
+    }, 30000);
+
     setTimeout(function () {
       if (data.ponto && data.ponto.lat != null) initMiniMap(data);
     }, 300);
@@ -143,8 +152,21 @@
   function close() {
     modalEl.classList.remove('open');
     document.body.classList.remove('modal-open');
+    clearInterval(liveTimer);
+    liveTimer = null;
     destroyMiniMap();
     if (onCloseCallback) onCloseCallback();
+  }
+
+  function updateLive() {
+    var fresh = Object.assign({}, currentData, {
+      next: getNextDeparture(currentData.horarios)
+    });
+    renderNextBus(fresh);
+    if (currentTab === 'horarios') {
+      var el = modalEl.querySelector('#modalTabContent');
+      if (el) renderScheduleTab(el, fresh);
+    }
   }
 
   /* ---- render sections ---- */
@@ -166,7 +188,8 @@
 
   function renderNextBus(data) {
     var el = modalEl.querySelector('#modalNextBus');
-    var nextLabel = data.next ? data.next.label : '--';
+    var next = data.next || getNextDeparture(data.horarios);
+    var nextLabel = next ? next.label : '--';
     el.innerHTML =
       '<div class="next-bus-card">' +
         '<div class="next-bus-left">' +
@@ -217,6 +240,75 @@
     if (shareBtn) {
       shareBtn.addEventListener('click', function () { sharePoint(data); });
     }
+  }
+
+  function renderReminderState(data) {
+    var wrap = modalEl.querySelector('#modalReminderWrap');
+    if (!wrap) return;
+    if (typeof Reminders === 'undefined') { wrap.innerHTML = ''; return; }
+
+    var stopId = data.ponto.id;
+
+    if (Reminders.hasForStop(stopId)) {
+      wrap.innerHTML =
+        '<div class="reminder-active">' +
+          '<i class="ti ti-bell-filled"></i>' +
+          '<span>Lembrete agendado para este ponto</span>' +
+          '<button class="reminder-cancel" id="reminderCancel" type="button">Cancelar</button>' +
+        '</div>';
+      var cancelBtn = wrap.querySelector('#reminderCancel');
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', function () {
+          Reminders.cancelForStop(stopId);
+          renderReminderState(data);
+          showToast('Lembrete cancelado.');
+        });
+      }
+      return;
+    }
+
+    var next = data.next || getNextDeparture(data.horarios);
+    var hasNext = next && next.time && next.time !== '--';
+    var optionsHtml = hasNext
+      ? [5, 10, 15, 30].map(function (m) {
+          return '<button class="reminder-opt" data-min="' + m + '" type="button">' + m + ' min</button>';
+        }).join('')
+      : '<span class="reminder-unavailable">Sem pr&oacute;ximo &ocirc;nibus hoje para lembrar.</span>';
+
+    wrap.innerHTML =
+      '<div class="reminder-inline">' +
+        '<span class="reminder-label"><i class="ti ti-bell"></i> Avisar antes do pr&oacute;ximo &ocirc;nibus:</span>' +
+        '<div class="reminder-options">' + optionsHtml + '</div>' +
+      '</div>';
+
+    wrap.querySelectorAll('.reminder-opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var minutes = Number(btn.getAttribute('data-min'));
+        Reminders.requestPermission().then(function () {
+          var reminder = Reminders.add({
+            stopId: stopId,
+            stopName: data.ponto.nome,
+            departure: next.time,
+            minutesBefore: minutes
+          });
+          if (reminder) {
+            showToast('Lembrete agendado para ' + formatTrigger(reminder.triggerAt) + '.');
+          } else {
+            showToast('Não foi possível agendar o lembrete.');
+          }
+          renderReminderState(data);
+        });
+      });
+    });
+  }
+
+  function formatTrigger(triggerAt) {
+    var d = new Date(triggerAt);
+    var now = new Date();
+    var hh = (d.getHours() < 10 ? '0' : '') + d.getHours();
+    var mm = (d.getMinutes() < 10 ? '0' : '') + d.getMinutes();
+    var dayLabel = d.toDateString() === now.toDateString() ? 'hoje' : 'amanhã';
+    return dayLabel + ' às ' + hh + ':' + mm;
   }
 
   function renderTabContent(data, tab) {
