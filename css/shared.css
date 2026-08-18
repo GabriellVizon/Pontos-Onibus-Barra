@@ -1615,7 +1615,7 @@ body:has(.fab) .back-to-top {
 
 .leaflet-popup-content strong {
     display: block;
-    color: var(--text-primary);
+    color: #000000;
     font-size: 13px;
     margin-bottom: 4px;
 }

@@ -9,31 +9,13 @@
     "lng": -48.5484917
   },
   {
-    "id": 2,
-    "ordem": 2,
-    "nome": "Igreja Congregação",
-    "endereco": "Rua Ivan Fleury Meireles",
-    "bairro": "Habitacional",
-    "lat": -22.4913627,
-    "lng": -48.5471219
-  },
-  {
-    "id": 3,
-    "ordem": 3,
-    "nome": "Posto de Saúde Central",
-    "endereco": "Rua Manoel de Almeida Camargo",
-    "bairro": "Centro",
-    "lat": -22.49159,
-    "lng": -48.55055
-  },
-  {
     "id": 4,
     "ordem": 4,
     "nome": "Mercado Fernandes Max",
-    "endereco": "Rua Valentin Regina, 325",
+    "endereco": "1817 Av. Pedro Ometto",
     "bairro": "Vila Narcisa",
-    "lat": -22.4918176,
-    "lng": -48.5539773
+    "lat": -22.4918411,
+    "lng": -48.549943
   },
   {
     "id": 5,
@@ -41,8 +23,8 @@
     "nome": "Mercado Jaú Serve",
     "endereco": "Rua Rio Branco, 550",
     "bairro": "Centro",
-    "lat": -22.4979176,
-    "lng": -48.5572217
+    "lat": -22.4978347,
+    "lng": -48.5571977
   },
   {
     "id": 6,
@@ -56,11 +38,11 @@
   {
     "id": 7,
     "ordem": 7,
-    "nome": "Supermercado Dia",
-    "endereco": "Av. da Saúde, 181",
+    "nome": "Panobianco Academia",
+    "endereco": "165 Av. da Saudade",
     "bairro": "Centro",
-    "lat": -22.4952,
-    "lng": -48.5621
+    "lat": -22.4963003,
+    "lng": -48.5634808
   },
   {
     "id": 8,
@@ -74,11 +56,38 @@
   {
     "id": 9,
     "ordem": 9,
-    "nome": "Supermercado Fernandes",
-    "endereco": "Rua 9 de Julho, 407",
+    "nome": "Caio Barbearia",
+    "endereco": "Av. Nove de Julho, 407 - Vila Ricci",
     "bairro": "Jardim São Caetano",
-    "lat": -22.4911512,
-    "lng": -48.5638026
+    "lat": -22.4911596,
+    "lng": -48.563772
+  },
+  {
+    "id": 53,
+    "ordem": 53,
+    "nome": "Atrás do Antigo James",
+    "endereco": "60 R. Natale Petri",
+    "bairro": "",
+    "lat": -22.4848165,
+    "lng": -48.5657136
+  },
+  {
+    "id": 54,
+    "ordem": 54,
+    "nome": "Praça Francisco Lourenção",
+    "endereco": "810 R. Hilário Parezan",
+    "bairro": "",
+    "lat": -22.4814379,
+    "lng": -48.5645534
+  },
+  {
+    "id": 55,
+    "ordem": 55,
+    "nome": "KIVERTRON (Em Frente)",
+    "endereco": "801 Av. Dr. José Erineu Ortigosa",
+    "bairro": "",
+    "lat": -22.4802459,
+    "lng": -48.567691
   },
   {
     "id": 10,
@@ -155,11 +164,11 @@
   {
     "id": 18,
     "ordem": 18,
-    "nome": "Rotatória Vitória 1",
-    "endereco": "R. Linda Cavalari",
+    "nome": "Banco de Onibus",
+    "endereco": "Av. Papa João Paulo 2",
     "bairro": "Sonho Nosso IV",
-    "lat": -22.4591652,
-    "lng": -48.56804
+    "lat": -22.4622585,
+    "lng": -48.5679504
   },
   {
     "id": 19,
@@ -173,7 +182,7 @@
   {
     "id": 20,
     "ordem": 20,
-    "nome": "Lanches",
+    "nome": "Lanches Avenida",
     "endereco": "Av. Dionísio Dutra e Silva, 457",
     "bairro": "Cohab",
     "lat": -22.4726483,
@@ -261,30 +270,183 @@
     "lng": -48.55645
   },
   {
-    "id": 30,
-    "ordem": 30,
-    "nome": "Posto do Frollini",
-    "endereco": "Av. João da Silva Nogueira",
+    "id": 33,
+    "ordem": 33,
+    "nome": "Ana Mara Supermercado",
+    "endereco": "Av. Dr. Dionísio Dutra e Silva, 272",
     "bairro": "Centro",
-    "lat": -22.4984249,
-    "lng": -48.5517277
+    "lat": -22.4748367,
+    "lng": -48.5690618
   },
   {
-    "id": 31,
-    "ordem": 31,
-    "nome": "Orquidário",
-    "endereco": "Av. João da Silva Nogueira",
-    "bairro": "Centro",
-    "lat": -22.5078845,
-    "lng": -48.5405268
+    "id": 34,
+    "ordem": 34,
+    "nome": "Zona Norte",
+    "endereco": "384 Av. Dr. Dionísio Dutra e Silva",
+    "bairro": "Cohab",
+    "lat": -22.4730028,
+    "lng": -48.5683513
   },
   {
-    "id": 32,
-    "ordem": 32,
-    "nome": "Hotel Estância",
-    "endereco": "Av. João da Silva Nogueira",
-    "bairro": "Centro",
-    "lat": -22.5138794,
-    "lng": -48.5366303
+    "id": 35,
+    "ordem": 35,
+    "nome": "Amados e mimados",
+    "endereco": "600 Av. Dr. Dionísio Dutra e Silva",
+    "bairro": "Cohab",
+    "lat": -22.4712566,
+    "lng": -48.567627
+  },
+  {
+    "id": 36,
+    "ordem": 36,
+    "nome": "Igreja",
+    "endereco": "896 Av. Dr. Dionísio Dutra e Silva",
+    "bairro": "Sonho Nosso I",
+    "lat": -22.4687579,
+    "lng": -48.5666667
+  },
+  {
+    "id": 37,
+    "ordem": 37,
+    "nome": "Esquina com a Rua Orestes Gerin",
+    "endereco": "343 R. Geraldo Salvi",
+    "bairro": "Sonho Nosso I",
+    "lat": -22.4681558,
+    "lng": -48.5656932
+  },
+  {
+    "id": 38,
+    "ordem": 38,
+    "nome": "Esquina com a Rua Papa João",
+    "endereco": "130 R. Geraldo Salvi",
+    "bairro": "",
+    "lat": -22.46784,
+    "lng": -48.5634339
+  },
+  {
+    "id": 39,
+    "ordem": 39,
+    "nome": "Esquina com a Rua Célso Sebastião",
+    "endereco": "135 R. Antônio Destro",
+    "bairro": "",
+    "lat": -22.4609828,
+    "lng": -48.5642422
+  },
+  {
+    "id": 40,
+    "ordem": 40,
+    "nome": "Atrás do campinho",
+    "endereco": "191 R. Erasmo Balde",
+    "bairro": "",
+    "lat": -22.4687679,
+    "lng": -48.560438
+  },
+  {
+    "id": 41,
+    "ordem": 41,
+    "nome": "Em frente a casa Nº 160",
+    "endereco": "160 R. Júlio Guiraldello",
+    "bairro": "",
+    "lat": -22.4694253,
+    "lng": -48.5574296
+  },
+  {
+    "id": 42,
+    "ordem": 42,
+    "nome": "Em frente ao SADH", 
+    "endereco": "200 R. Dirce Manfrinato Romanin",
+    "bairro": "",
+    "lat": -22.4679933,
+    "lng": -48.5578317
+  },
+  {
+    "id": 43,
+    "ordem": 43,
+    "nome": "Em frente a casa Nº 669",
+    "endereco": "678 R. Leonardo de Águiar",
+    "bairro": "",
+    "lat": -22.4665661,
+    "lng": -48.5590907
+  },
+  {
+    "id": 44,
+    "ordem": 44,
+    "nome": "Esquina com a Rua Jorge Pedrola",
+    "endereco": "531 R. Leonardo de Águiar",
+    "bairro": "",
+    "lat": -22.4666527,
+    "lng": -48.5604775
+  },
+  {
+    "id": 45,
+    "ordem": 45,
+    "nome": "Divinitos",
+    "endereco": "198 Rua João Morelato",
+    "bairro": "",
+    "lat": -22.464936,
+    "lng": -48.5631282
+  },
+  {
+    "id": 46,
+    "ordem": 46,
+    "nome": "Atrás da Igreja",
+    "endereco": "500 R. Roberto Chiaratto",
+    "bairro": "",
+    "lat": -22.4646541,
+    "lng": -48.562289
+  },
+  {
+    "id": 47,
+    "ordem": 47,
+    "nome": "Matagal?",
+    "endereco": "245 R. Mario Andréoli",
+    "bairro": "Sonho Nosso III",
+    "lat": -22.4643277,
+    "lng": -48.5601245
+  },
+  {
+    "id": 48,
+    "ordem": 48,
+    "nome": "Barzinho",
+    "endereco": "549 R. Mario Andréoli",
+    "bairro": "Sonho Nosso III",
+    "lat": -22.4617194,
+    "lng": -48.5602614
+  },
+  {
+    "id": 49,
+    "ordem": 49,
+    "nome": "Parquinho Antigo",
+    "endereco": "101 R. Domingos Miguel Ursini",
+    "bairro": "Sonho Nosso V",
+    "lat": -22.4603062,
+    "lng": -48.5609365
+  },
+  {
+    "id": 50,
+    "ordem": 50,
+    "nome": "Atrás do Sesi",
+    "endereco": "511 R. Avelino Bressanin",
+    "bairro": "Sonho Nosso V",
+    "lat": -22.4602597,
+    "lng": -48.5630862
+  },
+  {
+    "id": 51,
+    "ordem": 51,
+    "nome": "Esquina com a Rua Sílvio Cestari",
+    "endereco": "430 R. João Morelato",
+    "bairro": "Sonho Nosso V",
+    "lat": -22.4625873,
+    "lng": -48.5632562
+  },
+  {
+    "id": 52,
+    "ordem": 52,
+    "nome": "Esquina com a Rua Ângelo Biliassi",
+    "endereco": "271 R. Armando Moretti",
+    "bairro": "Sonho Nosso V",
+    "lat": -22.4622295,
+    "lng": -48.565426
   }
 ]

@@ -1,3 +1,4 @@
+console.log("SCRIPT.JS FOI CARREGADO");
 const BARRA_BONITA_CENTER = [-22.4946, -48.5588];
 
 const state = {
@@ -402,7 +403,7 @@ function renderNearbyStops() {
 }
 
 function renderStopCard(ponto) {
-  const next = getNextDeparture(state.horarios);
+  const next = encontrarPassagens(ponto.id);
   const horariosLinha = getHorario(state.horarios, getCurrentDayType());
   const distanceText = typeof ponto.distancia === 'number'
     ? formatDistance(ponto.distancia)
@@ -415,7 +416,7 @@ function renderStopCard(ponto) {
     ? `https://www.google.com/maps/dir/?api=1&destination=${ponto.lat},${ponto.lng}`
     : '';
   const isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
-  const nextClass = next.minutes <= 5 ? 'now' : 'waiting';
+  const nextClass = next.minutosRestantes <= 5 ? 'now' : 'waiting';
 
   return `
     <div class="card stop-card ${selected}" data-stop-id="${ponto.id}">
@@ -434,7 +435,7 @@ function renderStopCard(ponto) {
       <p class="card-address">${escapeHtml(ponto.endereco)}</p>
       <div class="card-next-bus">
         <span class="card-next-label"><i class="ti ti-bus"></i> Próximo ônibus</span>
-        <span class="card-next-time ${nextClass}">${escapeHtml(next.label)}</span>
+        <span class="card-next-time ${nextClass}">${escapeHtml(next.horario)}</span>
       </div>
       <div class="card-meta">
         <span class="meta-chip">${escapeHtml(ponto.bairro)}</span>
@@ -620,7 +621,7 @@ function updateLocationSummary() {
   setLocationStatus(
     'Localização detectada',
     `${nearest.nome} (${formatDistance(nearest.distancia)})`,
-    next.label,
+    next.horario,
   );
 
   if (!state.selectedStopId) {
@@ -669,7 +670,7 @@ function selectStop(stopId, options = {}) {
   if (!ponto) return;
 
   state.selectedStopId = stopId;
-  const next = getNextDeparture(state.horarios);
+  const next = encontrarPassagens(stopId);
 
   document.querySelectorAll('[data-stop-id]').forEach((card) => {
     card.classList.toggle('selected', Number(card.dataset.stopId) === stopId);
@@ -678,7 +679,7 @@ function selectStop(stopId, options = {}) {
   if (els.selectedStopName) els.selectedStopName.textContent = ponto.nome;
   if (els.selectedStopDetails) {
     els.selectedStopDetails.textContent = hasCoords(ponto)
-      ? `${ponto.endereco} - próxima saída ${next.label}`
+      ? `${ponto.endereco} - próxima saída ${next.horario}`
       : `${ponto.endereco} - este ponto ainda não tem latitude e longitude.`;
   }
 
@@ -700,28 +701,41 @@ function setLocationStatus(location, nearest, departure) {
 
 function refreshLiveDepartures() {
   if (!state.horarios) return;
-  const next = getNextDeparture(state.horarios);
-
-  if (els.nextDepartureText && els.nextDepartureText.textContent !== '--') {
-    els.nextDepartureText.textContent = next.label;
-  }
 
   document.querySelectorAll('.stop-card').forEach((card) => {
+    const stopId = Number(card.dataset.stopId);
+    const next = encontrarPassagens(stopId);
+
     const timeEl = card.querySelector('.card-next-time');
+
     if (timeEl) {
-      timeEl.textContent = next.label;
+      if (!next.encontrado) {
+        timeEl.textContent = 'Sem horário';
+        timeEl.classList.remove('now', 'waiting');
+        return;
+      }
+
+      timeEl.textContent = next.horario;
       timeEl.classList.remove('now', 'waiting');
-      timeEl.classList.add(next.minutes <= 5 ? 'now' : 'waiting');
+      timeEl.classList.add(
+        next.minutosRestantes <= 5 ? 'now' : 'waiting'
+      );
     }
-    card.querySelectorAll('.time-chip').forEach((chip) => {
-      chip.classList.toggle('active', chip.textContent.trim() === next.time);
-    });
   });
 
   if (state.selectedStopId && els.selectedStopDetails) {
-    const ponto = state.pontos.find((p) => p.id === state.selectedStopId);
+    const ponto = state.pontos.find(
+      (p) => p.id === state.selectedStopId
+    );
+
     if (ponto && hasCoords(ponto)) {
-      els.selectedStopDetails.textContent = `${ponto.endereco} - próxima saída ${next.label}`;
+      const next = encontrarPassagens(state.selectedStopId);
+
+      els.selectedStopDetails.textContent =
+        next.encontrado
+          ? `${ponto.endereco} - próxima passagem ${next.horario}`
+          : `${ponto.endereco} - sem mais horários hoje.`;
     }
   }
 }
+
