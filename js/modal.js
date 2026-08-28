@@ -7,6 +7,15 @@
   var currentTab = 'horarios';
   var liveTimer = null;
 
+  var modalState = {
+    linhaSelecionada: 'circular',
+    sentidoPlena: null,
+    diaTabPlena: 'uteis',
+    linhasDisponiveis: [],
+    sentidosPlena: [],
+    abasDiaPlena: []
+  };
+
   function init(options) {
     onCloseCallback = options && options.onClose ? options.onClose : null;
     onFavToggleCallback = options && options.onFavToggle ? options.onFavToggle : null;
@@ -31,6 +40,7 @@
           '</div>' +
         '</div>' +
         '<div class="modal-body" id="modalBody">' +
+          '<div class="modal-section modal-line-selector-wrap" id="modalLineSelector"></div>' +
           '<div class="modal-section modal-next-bus" id="modalNextBus"></div>' +
           '<div class="modal-section modal-info-row" id="modalInfoRow"></div>' +
           '<div class="modal-section modal-actions-row" id="modalActions"></div>' +
@@ -124,7 +134,34 @@
       tabBtns[i].classList.toggle('active', tabBtns[i].getAttribute('data-tab') === 'horarios');
     }
 
+    var linhas = data.linhas || ['circular'];
+    var linhaInicial = linhas.length === 1 ? linhas[0] : 'circular';
+    if (linhas.indexOf(linhaInicial) === -1) linhaInicial = linhas[0];
+
+    modalState.linhaSelecionada = linhaInicial;
+    modalState.linhasDisponiveis = linhas;
+
+    if (linhaInicial === 'plena') {
+      var sentidos = typeof obterSentidosPlena === 'function'
+        ? obterSentidosPlena(data.ponto.id)
+        : [];
+      modalState.sentidosPlena = sentidos;
+      modalState.sentidoPlena = sentidos.length > 0 ? sentidos[0].id : null;
+
+      var abas = typeof obterAbasDiaPlena === 'function'
+        ? obterAbasDiaPlena(modalState.sentidoPlena, data.ponto.id)
+        : [];
+      modalState.abasDiaPlena = abas;
+      modalState.diaTabPlena = abas.length > 0 ? abas[0].id : 'uteis';
+    } else {
+      modalState.sentidosPlena = [];
+      modalState.sentidoPlena = null;
+      modalState.abasDiaPlena = [];
+      modalState.diaTabPlena = 'uteis';
+    }
+
     renderHeader(data);
+    renderLineSelector();
     renderNextBus(data);
     renderInfoRow(data);
     renderActions(data);
@@ -160,13 +197,42 @@
 
   function updateLive() {
     var fresh = Object.assign({}, currentData, {
-      next: getNextDeparture(currentData.horarios)
+      next: computeNextForModal()
     });
     renderNextBus(fresh);
     if (currentTab === 'horarios') {
       var el = modalEl.querySelector('#modalTabContent');
       if (el) renderScheduleTab(el, fresh);
     }
+  }
+
+  /* ---- compute next bus based on current selection ---- */
+
+  function computeNextForModal() {
+    if (modalState.linhaSelecionada === 'plena') {
+      if (typeof encontrarPassagensPlena === 'function' && modalState.sentidoPlena) {
+        var res = encontrarPassagensPlena(
+          currentData.ponto.id,
+          modalState.sentidoPlena,
+          modalState.diaTabPlena
+        );
+        if (res.encontrado) {
+          var minRest = res.minutosRestantes;
+          var label;
+          if (res.estado === 'chegando') label = 'Agora';
+          else if (minRest < 60) label = minRest + ' min';
+          else {
+            var h = Math.floor(minRest / 60);
+            var m = minRest % 60;
+            label = m === 0 ? h + 'h' : h + 'h ' + m + 'min';
+          }
+          return { time: res.horario, label: label, minutes: minRest };
+        }
+        return { time: '--', label: 'Sem horário', minutes: Infinity };
+      }
+      return { time: '--', label: 'Sem dados', minutes: Infinity };
+    }
+    return getNextDeparture(currentData.horarios);
   }
 
   /* ---- render sections ---- */
@@ -186,12 +252,135 @@
     favBtn.classList.remove('fill', 'empty');
   }
 
+  function renderLineSelector() {
+    var el = modalEl.querySelector('#modalLineSelector');
+    if (!el) return;
+
+    var linhas = modalState.linhasDisponiveis;
+    if (linhas.length <= 1) {
+      el.style.display = 'none';
+      return;
+    }
+
+    el.style.display = '';
+    var html = '<div class="line-selector">';
+    linhas.forEach(function (l) {
+      var nome = l === 'circular' ? 'Circular de Barra Bonita' : 'Plena: Barra ↔ Igaraçu';
+      var cls = l === modalState.linhaSelecionada ? 'line-selector-btn active' : 'line-selector-btn';
+      var dotColor = l === 'circular' ? '#e74c3c' : '#2196f3';
+      html += '<button class="' + cls + '" data-linha="' + l + '">' +
+        '<span class="line-selector-dot" style="background:' + dotColor + '"></span>' +
+        nome +
+        '</button>';
+    });
+    html += '</div>';
+
+    el.innerHTML = html;
+
+    el.querySelectorAll('.line-selector-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        modalState.linhaSelecionada = this.getAttribute('data-linha');
+        onLinhaChange();
+      });
+    });
+  }
+
+  function onLinhaChange() {
+    var linha = modalState.linhaSelecionada;
+
+    renderLineSelector();
+
+    if (linha === 'plena') {
+      var sentidos = typeof obterSentidosPlena === 'function'
+        ? obterSentidosPlena(currentData.ponto.id)
+        : [];
+      modalState.sentidosPlena = sentidos;
+      modalState.sentidoPlena = sentidos.length > 0 ? sentidos[0].id : null;
+
+      var abas = typeof obterAbasDiaPlena === 'function'
+        ? obterAbasDiaPlena(modalState.sentidoPlena, currentData.ponto.id)
+        : [];
+      modalState.abasDiaPlena = abas;
+      modalState.diaTabPlena = abas.length > 0 ? abas[0].id : 'uteis';
+    } else {
+      modalState.sentidosPlena = [];
+      modalState.sentidoPlena = null;
+      modalState.abasDiaPlena = [];
+      modalState.diaTabPlena = 'uteis';
+    }
+
+    var fresh = Object.assign({}, currentData, { next: computeNextForModal() });
+    renderNextBus(fresh);
+    renderInfoRow(fresh);
+    renderReminderState(fresh);
+
+    currentTab = 'horarios';
+    var tabBtns = modalEl.querySelectorAll('.modal-tab-btn');
+    for (var i = 0; i < tabBtns.length; i++) {
+      tabBtns[i].classList.toggle('active', tabBtns[i].getAttribute('data-tab') === 'horarios');
+    }
+    renderTabContent(currentData, 'horarios');
+
+    if (linha === 'plena') {
+      setTimeout(function () { renderDirectionSelector(); }, 0);
+    }
+  }
+
+  function renderDirectionSelector() {
+    var wrap = modalEl.querySelector('#modalTabContent');
+    if (!wrap || modalState.linhaSelecionada !== 'plena') return;
+    if (modalState.sentidosPlena.length <= 1) return;
+
+    var dirHtml = '<div class="direction-selector">';
+    modalState.sentidosPlena.forEach(function (s) {
+      var cls = s.id === modalState.sentidoPlena ? 'direction-btn active' : 'direction-btn';
+      dirHtml += '<button class="' + cls + '" data-sentido="' + s.id + '">' + escapeHtml(s.nome) + '</button>';
+    });
+    dirHtml += '</div>';
+
+    var existingDir = wrap.querySelector('.direction-selector');
+    if (existingDir) existingDir.remove();
+
+    wrap.insertAdjacentHTML('afterbegin', dirHtml);
+
+    wrap.querySelectorAll('.direction-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        modalState.sentidoPlena = this.getAttribute('data-sentido');
+
+        var abas = typeof obterAbasDiaPlena === 'function'
+          ? obterAbasDiaPlena(modalState.sentidoPlena, currentData.ponto.id)
+          : [];
+        modalState.abasDiaPlena = abas;
+        if (abas.length > 0 && abas.every(function (a) { return a.id !== modalState.diaTabPlena; })) {
+          modalState.diaTabPlena = abas[0].id;
+        }
+
+        var fresh = Object.assign({}, currentData, { next: computeNextForModal() });
+        renderNextBus(fresh);
+        renderInfoRow(fresh);
+        renderScheduleTab(wrap, fresh);
+        renderReminderState(fresh);
+      });
+    });
+  }
+
   function renderNextBus(data) {
     var el = modalEl.querySelector('#modalNextBus');
-    var next = data.next || getNextDeparture(data.horarios);
+    var next = data.next || computeNextForModal();
     var nextLabel = next ? next.label : '--';
+
+    var pillName;
+    if (modalState.linhaSelecionada === 'plena') {
+      var sentido = modalState.sentidosPlena.find(function (s) { return s.id === modalState.sentidoPlena; });
+      pillName = sentido ? sentido.nome : 'Plena';
+    } else {
+      pillName = 'Rota Circular';
+    }
+
+    var pillColor = modalState.linhaSelecionada === 'plena' ? '#2196f3' : '';
+
     el.innerHTML =
-      '<div class="next-bus-card">' +
+      '<div class="next-bus-card"' + (pillColor ? ' style="background:' + pillColor + '"' : '') + '>' +
         '<div class="next-bus-left">' +
           '<span class="next-bus-label">Pr&oacute;ximo &ocirc;nibus</span>' +
           '<div class="next-bus-main">' +
@@ -200,7 +389,7 @@
           '</div>' +
         '</div>' +
         '<div class="next-bus-pill">' +
-          '<span class="next-bus-pill-name">Rota Circular</span>' +
+          '<span class="next-bus-pill-name">' + escapeHtml(pillName) + '</span>' +
         '</div>' +
       '</div>';
   }
@@ -214,7 +403,7 @@
     if (dText) {
       html += '<div class="info-col-card"><i class="ti ti-north-star"></i><div><p class="info-col-label">Dist&acirc;ncia</p><p class="info-col-value">' + escapeHtml(dText) + '</p></div></div>';
     }
-    html += '<div class="info-col-card"><i class="ti ti-home"></i><div><p class="info-col-label">Bairro</p><p class="info-col-value">' + escapeHtml(ponto.bairro) + '</p></div></div>';
+    html += '<div class="info-col-card"><i class="ti ti-home"></i><div><p class="info-col-label">Bairro</p><p class="info-col-value">' + escapeHtml(ponto.bairro || '—') + '</p></div></div>';
     el.innerHTML = html;
   }
 
@@ -267,7 +456,7 @@
       return;
     }
 
-    var next = data.next || getNextDeparture(data.horarios);
+    var next = data.next || computeNextForModal();
     var hasNext = next && next.time && next.time !== '--';
     var optionsHtml = hasNext
       ? [5, 10, 15, 30].map(function (m) {
@@ -321,7 +510,17 @@
     }
   }
 
+  /* ---- Schedule Tab ---- */
+
   function renderScheduleTab(el, data) {
+    if (modalState.linhaSelecionada === 'plena') {
+      renderSchedulePlena(el, data);
+    } else {
+      renderScheduleCircular(el, data);
+    }
+  }
+
+  function renderScheduleCircular(el, data) {
     var horarios = data.horarios;
     if (!horarios || horarios.length === 0) {
       var emptyMsg = getCurrentDayType() === 'domingo'
@@ -342,8 +541,99 @@
       '</div>';
   }
 
+  function renderSchedulePlena(el, data) {
+    var html = '';
+
+    if (modalState.sentidosPlena.length > 1) {
+      html += '<div class="direction-selector">';
+      modalState.sentidosPlena.forEach(function (s) {
+        var cls = s.id === modalState.sentidoPlena ? 'direction-btn active' : 'direction-btn';
+        html += '<button class="' + cls + '" data-sentido="' + s.id + '">' + escapeHtml(s.nome) + '</button>';
+      });
+      html += '</div>';
+    }
+
+    if (modalState.abasDiaPlena.length > 1) {
+      html += '<div class="day-tabs">';
+      modalState.abasDiaPlena.forEach(function (aba) {
+        var cls = aba.id === modalState.diaTabPlena ? 'day-tab active' : 'day-tab';
+        html += '<button class="' + cls + '" data-dia="' + aba.id + '">' + escapeHtml(aba.nome) + '</button>';
+      });
+      html += '</div>';
+    }
+
+    var horarios = obterHorariosPlena(modalState.sentidoPlena, modalState.diaTabPlena, data.ponto.id);
+    var sentido = modalState.sentidosPlena.find(function (s) { return s.id === modalState.sentidoPlena; });
+    var dotColor = '#2196f3';
+
+    if (horarios.length === 0) {
+      html += '<p class="tab-empty">Nenhum horário disponível para este sentido e dia.</p>';
+    } else {
+      var next = computeNextForModal();
+      var nextTime = next ? next.time : null;
+      var times = horarios.map(function (t) {
+        var cls = t === nextTime ? ' modal-time-active' : '';
+        return '<span class="modal-time' + cls + '">' + escapeHtml(t) + '</span>';
+      }).join('');
+
+      html +=
+        '<div class="schedule-group">' +
+          '<div class="schedule-line-label"><span class="schedule-dot" style="background:' + dotColor + '"></span>' +
+          escapeHtml(sentido ? sentido.nome : 'Plena') +
+          '</div>' +
+          '<div class="modal-times-grid">' + times + '</div>' +
+        '</div>';
+    }
+
+    el.innerHTML = html;
+
+    el.querySelectorAll('.direction-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        modalState.sentidoPlena = this.getAttribute('data-sentido');
+        var novasAbas = typeof obterAbasDiaPlena === 'function'
+          ? obterAbasDiaPlena(modalState.sentidoPlena, data.ponto.id)
+          : [];
+        modalState.abasDiaPlena = novasAbas;
+        if (novasAbas.length > 0 && novasAbas.every(function (a) { return a.id !== modalState.diaTabPlena; })) {
+          modalState.diaTabPlena = novasAbas[0].id;
+        }
+
+        var fresh = Object.assign({}, data, { next: computeNextForModal() });
+        renderNextBus(fresh);
+        renderInfoRow(fresh);
+        renderSchedulePlena(el, fresh);
+        renderReminderState(fresh);
+      });
+    });
+
+    el.querySelectorAll('.day-tab').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        modalState.diaTabPlena = this.getAttribute('data-dia');
+
+        el.querySelectorAll('.day-tab').forEach(function (t) {
+          t.classList.toggle('active', t.getAttribute('data-dia') === modalState.diaTabPlena);
+        });
+
+        var fresh = Object.assign({}, data, { next: computeNextForModal() });
+        renderSchedulePlena(el, fresh);
+        renderReminderState(fresh);
+      });
+    });
+  }
+
   function renderRouteTab(el, data) {
-    var allLinePoints = data.allLinePoints;
+    var allLinePoints;
+    if (modalState.linhaSelecionada === 'plena') {
+      var sentido = modalState.sentidosPlena.find(function (s) { return s.id === modalState.sentidoPlena; });
+      if (sentido && typeof obterPontosPlena === 'function') {
+        allLinePoints = obterPontosPlena(sentido.pontos);
+      } else {
+        allLinePoints = [];
+      }
+    } else {
+      allLinePoints = data.allLinePoints;
+    }
+
     if (!allLinePoints || allLinePoints.length < 2) {
       el.innerHTML = '<p class="tab-empty">Percurso n&atilde;o dispon&iacute;vel.</p>';
       return;
@@ -354,10 +644,11 @@
       var isCurrent = Number(p.id) === currentId;
       var dotClass = isCurrent ? ' route-stop-dot route-dot-current' : ' route-stop-dot';
       var nameClass = isCurrent ? ' route-stop-name route-name-current' : ' route-stop-name';
+      var lineColor = modalState.linhaSelecionada === 'plena' ? '#2196f3' : (data.lineColor || BUS_COLOR);
       parts.push(
         '<div class="route-stop">' +
           '<span class="' + nameClass + '">' + escapeHtml(p.nome) + (isCurrent ? ' <i class="ti ti-map-pin"></i>' : '') + '</span>' +
-          '<div class="' + dotClass + '"></div>' +
+          '<div class="' + dotClass + '"' + (isCurrent ? ' style="background:' + lineColor + ';box-shadow:0 0 0 4px ' + hexToRgba(lineColor, 0.35) + '"' : '') + '></div>' +
         '</div>'
       );
       if (i < allLinePoints.length - 1) {
@@ -371,7 +662,7 @@
     var ponto = data.ponto;
     var text = [
       ponto.nome,
-      ponto.endereco + ' - ' + ponto.bairro,
+      ponto.endereco + ' - ' + (ponto.bairro || ''),
       'BarraBonita/SP',
       'https://www.google.com/maps?q=' + ponto.lat + ',' + ponto.lng
     ].filter(Boolean).join('\n');

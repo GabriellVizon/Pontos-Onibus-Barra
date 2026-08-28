@@ -446,6 +446,35 @@ body.modal-open {
     color: #333333;
 }
 
+[data-theme="light"] .line-selector-btn {
+    border: 1px solid #333333;
+}
+
+[data-theme="light"] .line-selector-btn.active {
+    background: var(--red);
+    color: #fff;
+    border-color: var(--red);
+}
+
+[data-theme="light"] .direction-btn {
+    border: 1px solid #333333;
+}
+
+[data-theme="light"] .direction-btn.active {
+    background: #2196f3;
+    color: #fff;
+    border-color: #2196f3;
+}
+
+[data-theme="light"] .day-tab {
+    border: 1px solid transparent;
+}
+
+[data-theme="light"] .day-tab.active {
+    background: #2196f3;
+    color: #fff;
+}
+
 [data-theme="light"] .modal-time {
     border: 1px solid #333333;
 }
@@ -1155,6 +1184,29 @@ body.modal-open {
     }
     .modal-times-grid {
         grid-template-columns: repeat(4, 1fr);
+    }
+    .line-selector {
+        flex-direction: column;
+    }
+    .line-selector-btn {
+        padding: 10px 14px;
+        font-size: 12px;
+    }
+    .direction-selector {
+        flex-wrap: wrap;
+    }
+    .direction-btn {
+        padding: 8px 12px;
+        font-size: 11px;
+    }
+    .day-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+    .day-tab {
+        min-width: auto;
+        padding: 7px 10px;
+        font-size: 11px;
     }
 }
 

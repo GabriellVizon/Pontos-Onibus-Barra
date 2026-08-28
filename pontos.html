@@ -95,18 +95,61 @@
                         </div>
                     </div>
 
+
+                    <section class="nearby-priority" id="nearbyPrioritySection" aria-labelledby="nearbyPriorityTitle">
+                        <div class="nearby-priority-header">
+                            <div><span class="nearby-priority-eyebrow">PERTO DE VOCÊ</span><h2 class="nearby-priority-title" id="nearbyPriorityTitle">Pontos mais próximos</h2></div>
+                            <span class="nearby-priority-status" id="nearbyPriorityStatus">Aguardando GPS</span>
+                        </div>
+                        <div class="nearby-priority-grid" id="nearbyPriorityGrid" aria-live="polite"></div>
+                        <div class="nearby-priority-actions" id="nearbyPriorityActions"></div>
+                    </section>
+
                     <!-- Schedule -->
                     <div class="schedule-header">
                         <span class="schedule-title">Tabela de Horários</span>
                     </div>
 
+                    <div class="schedule-line-selector" id="scheduleLineSelector" style="display:none;">
+                        <span class="schedule-selector-label">Linha</span>
+                        <div class="schedule-selector-btns" id="scheduleLineBtns"></div>
+                    </div>
+
+                    <div class="schedule-direction-selector" id="scheduleDirectionSelector" style="display:none;">
+                        <span class="schedule-selector-label">Sentido da viagem</span>
+                        <div class="schedule-selector-btns" id="scheduleDirectionBtns"></div>
+                    </div>
+
                     <div class="schedule-table" id="scheduleTable">
-                        <tbody id="scheduleBody"></tbody>
+                        <div id="scheduleDynamicContent"></div>
                     </div>
                     <p class="schedule-note" id="scheduleNote">Selecione um ponto para ver a próxima saída.</p>
                 </div>
-                <div class="points-grid" id="pointsGrid" aria-live="polite"></div>
-                <div class="show-more-container" id="showMoreContainer"></div>
+
+                <section class="other-points-section" id="circularPointsSection" aria-labelledby="circularPointsTitle">
+                    <div class="other-points-header">
+                        <div><span class="nearby-priority-eyebrow">CONTINUE EXPLORANDO</span><h2 class="other-points-title" id="circularPointsTitle">Outros pontos próximos</h2></div>
+                        <span class="nearby-priority-status" id="circularPointsCount"></span>
+                    </div>
+                    <div class="points-grid" id="pointsGrid" aria-live="polite"></div>
+                    <div class="show-more-container" id="showMoreContainer"></div>
+                </section>
+
+                <!-- Plena Section -->
+                <div class="line-divider" id="plenaDivider" style="display:none;">
+                    <span class="line-divider-line"></span>
+                    <span class="line-divider-text">Outra linha</span>
+                    <span class="line-divider-line"></span>
+                </div>
+
+                <div class="plena-section" id="plenaSection" style="display:none;">
+                    <div class="plena-section-header">
+                        <span class="plena-badge">PLENA</span>
+                        <h2 class="plena-section-title">Barra Bonita ↔ Igaraçu do Tietê</h2>
+                    </div>
+                    <div class="points-grid" id="plenaPointsGrid" aria-live="polite"></div>
+                    <div class="show-more-container" id="plenaShowMoreContainer"></div>
+                </div>
             </div>
 
             <!-- Sidebar Column -->
@@ -118,15 +161,6 @@
                         <i class="ti ti-arrows-maximize"></i>
                         <span>Ver Mapa Completo</span>
                     </div>
-                </div>
-
-                <!-- Stops Card -->
-                <div class="stops-card">
-                    <div class="stops-header">
-                        <span class="stops-title">Pontos</span>
-                        <span class="stops-count">14 PARADAS</span>
-                    </div>
-                    <ul class="sidebar-items" id="sidebarItems"></ul>
                 </div>
             </aside>
         </div>
