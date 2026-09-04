@@ -41,7 +41,32 @@
     "nextOccurrenceDate": "readonly",
     "reminderTriggerDate": "readonly",
     "showToast": "readonly",
-    "Reminders": "readonly"
+    "Reminders": "readonly",
+    "CONFIG_HORARIOS": "readonly",
+    "CONFIG_PLENA": "readonly",
+    "carregarConfigPlena": "readonly",
+    "horarioParaMinutos": "readonly",
+    "minutosParaHorario": "readonly",
+    "obterSequenciaViagem": "readonly",
+    "encontrarOcorrencias": "readonly",
+    "calcularHorarioPonto": "readonly",
+    "calcularPassagensDoPonto": "readonly",
+    "encontrarPassagens": "readonly",
+    "obterTextoProximoOnibus": "readonly",
+    "obterSentidosPlena": "readonly",
+    "obterAbasDiaPlena": "readonly",
+    "obterHorariosPlena": "readonly",
+    "calcularPassagensPlena": "readonly",
+    "encontrarPassagensPlena": "readonly",
+    "encontrarProximoPlena": "readonly",
+    "obterPontosPlena": "readonly",
+    "getDiverseSuggestions": "readonly",
+    "skeletonCard": "readonly",
+    "renderSkeletons": "readonly",
+    "getSearchBackdrop": "readonly",
+    "toggleMobileSearch": "readonly",
+    "setupMobileSearchDismiss": "readonly",
+    "gpsDeniedHelp": "readonly"
   },
   "parserOptions": {
     "ecmaVersion": 2020,
@@ -56,7 +81,7 @@
   },
   "overrides": [
     {
-      "files": ["js/utils.js"],
+      "files": ["js/utils.js", "js/horarios.js"],
       "rules": {
         "no-unused-vars": "off"
       }

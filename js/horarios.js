@@ -1,5 +1,3 @@
-console.log("HORARIOS.JS FOI CARREGADO");
-
 // ========================================
 // CONFIGURAÇÃO CIRCULAR (sem alteração)
 // ========================================
@@ -486,34 +484,4 @@ function encontrarProximoPlena(pontoId, agora) {
 }
 
 
-// ========================================
-// TESTES
-// ========================================
 
-console.log(
-    "PASSAGENS RODOVIÁRIA:",
-    calcularPassagensDoPonto(1)
-);
-
-console.log(
-    "RODOVIÁRIA 20:10:",
-    encontrarPassagens(
-        1,
-        (() => {
-            const d = new Date();
-            d.setHours(20, 10, 0, 0);
-            return d;
-        })()
-    )
-);
-
-console.table(
-    calcularPassagensDoPonto(1).map(
-        p => ({
-            rota: p.rota,
-            saida: p.saida,
-            posicao: p.posicao,
-            horario: p.horario
-        })
-    )
-);

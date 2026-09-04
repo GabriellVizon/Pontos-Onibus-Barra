@@ -47,7 +47,7 @@
                 '</div>' +
             '</div>' +
             '<div class="footer-bottom">' +
-                '<span>© <span id="footerYear">2024</span> BarraBus. Todos os direitos reservados.</span>' +
+                '<span>© <span id="footerYear">' + new Date().getFullYear() + '</span> BarraBus. Todos os direitos reservados.</span>' +
                 '<span>Desenvolvido para Barra Bonita, SP</span>' +
             '</div>' +
         '</footer>';

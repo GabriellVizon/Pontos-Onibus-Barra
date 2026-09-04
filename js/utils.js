@@ -327,3 +327,66 @@ function cardClickEffect(card, callback) {
     }, 120);
   });
 }
+
+function skeletonCard() {
+  return (
+    '<div class="skeleton-card" aria-hidden="true">' +
+      '<div class="skeleton-line short"></div>' +
+      '<div class="skeleton-line medium tall"></div>' +
+      '<div class="skeleton-line full"></div>' +
+      '<div class="skeleton-line round full"></div>' +
+    '</div>'
+  );
+}
+
+function renderSkeletons(container, count) {
+  if (!container) return;
+  var n = (typeof count === 'number' && Number.isFinite(count) && count > 0) ? Math.floor(count) : 3;
+  var html = '';
+  for (var i = 0; i < n; i++) html += skeletonCard();
+  container.innerHTML = html;
+}
+
+function getSearchBackdrop() {
+  var el = document.getElementById('searchBackdrop');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'searchBackdrop';
+    el.className = 'search-backdrop';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function toggleMobileSearch(open) {
+  var searchBox = document.getElementById('searchBox');
+  var backdrop = getSearchBackdrop();
+  var isSmallScreen = window.innerWidth <= 480;
+  if (open) {
+    if (searchBox) searchBox.classList.add('mobile-open');
+    if (isSmallScreen) backdrop.classList.add('show');
+  } else {
+    if (searchBox) searchBox.classList.remove('mobile-open');
+    backdrop.classList.remove('show');
+    var input = document.getElementById('searchInput');
+    if (input) input.blur();
+  }
+  if (!open) {
+    var results = document.getElementById('searchResults');
+    if (results) results.classList.remove('show');
+  }
+}
+
+function setupMobileSearchDismiss() {
+  var backdrop = getSearchBackdrop();
+  backdrop.addEventListener('click', function () {
+    toggleMobileSearch(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') toggleMobileSearch(false);
+  });
+}
+
+function gpsDeniedHelp() {
+  return 'Para ativar, clique no ícone de cadeado (ou nas configurações do navegador) ao lado da barra de endereço e permita o acesso à sua localização. Depois toque em "Usar minha localização" novamente.';
+}

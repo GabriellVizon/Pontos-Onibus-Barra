@@ -1,10 +1,10 @@
-console.log("SCRIPT.JS FOI CARREGADO");
 const BARRA_BONITA_CENTER = [-22.4946, -48.5588];
 
 const state = {
   pontos: [],
   horarios: [],
   userPosition: null,
+  gpsDenied: false,
   selectedStopId: null,
   map: null,
   markerLayer: null,
@@ -47,6 +47,11 @@ async function init() {
   setupSearch();
   setupBackToTop();
   setupOfflineDetection();
+
+  if (!loadCache()) {
+    renderSkeletons(els.favStops, 3);
+    renderSkeletons(els.nearbyStops, 3);
+  }
 
   if (typeof Reminders !== 'undefined') {
     Reminders.init({
@@ -225,7 +230,7 @@ function setupSearch() {
   if (!els.searchInput || !els.searchResults ) return;
 
   els.searchMobileBtn?.addEventListener('click', () => {
-    document.getElementById('searchBox')?.classList.toggle('mobile-open');
+    toggleMobileSearch(true);
     els.searchInput?.focus();
   });
 
@@ -265,8 +270,11 @@ function setupSearch() {
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.search-box')) {
       hideSearchSuggestions();
+      toggleMobileSearch(false);
     }
   });
+
+  setupMobileSearchDismiss();
 
   const searchIcon = document.querySelector('#searchBox .ti-search');
   searchIcon?.addEventListener('click', (e) => {
@@ -380,7 +388,10 @@ function renderNearbyStops() {
   if (!els.nearbyStops) return;
 
   if (!state.userPosition) {
-    showEmpty(els.nearbyStops, 'Permita o acesso à localização para ver os 3 pontos mais próximos de você.');
+    var msg = state.gpsDenied
+      ? gpsDeniedHelp()
+      : 'Permita o acesso à localização para ver os 3 pontos mais próximos de você.';
+    showEmpty(els.nearbyStops, msg);
     if (els.nearbySubtitle) {
       els.nearbySubtitle.textContent = 'A busca e a lista completa continuam disponíveis abaixo.';
     }
@@ -426,7 +437,7 @@ function renderStopCard(ponto) {
         </div>
         <div class="card-header-right">
           <span class="card-distance">${escapeHtml(distanceText)}</span>
-          <button class="fav-btn ${isFav ? 'favorited' : ''}" data-id="${ponto.id}" aria-label="Favoritar">
+          <button class="fav-btn ${isFav ? 'favorited' : ''}" data-id="${ponto.id}" aria-label="${isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}">
             <i class="ti ti-${isFav ? 'heart-filled' : 'heart'}"></i>
           </button>
         </div>
@@ -569,7 +580,8 @@ function requestUserLocation(options = {}) {
     },
     (error) => {
       if (state.distanceCache) state.distanceCache.invalidate();
-      const message = error.code === error.PERMISSION_DENIED
+      state.gpsDenied = error.code === error.PERMISSION_DENIED;
+      const message = state.gpsDenied
         ? 'Permissão negada'
         : 'Não foi possível localizar';
       setLocationStatus(message, 'Busca manual disponível', '--');

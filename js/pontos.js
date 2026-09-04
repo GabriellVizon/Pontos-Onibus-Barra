@@ -6,6 +6,7 @@
         pontosPlena: [],
         horariosPlena: null,
         userPosition: null,
+        gpsDenied: false,
         selectedPointId: null,
         visibleCount: 5,
         visibleCountPlena: 5,
@@ -116,6 +117,8 @@
                 if (state.distanceCache) state.distanceCache.invalidate();
                 initModalOnce();
                 hideSplash();
+            } else if (els.pointsGrid) {
+                renderSkeletons(els.pointsGrid, 5);
             }
 
             await loadData();
@@ -124,7 +127,7 @@
             renderMapMarkers();
             render();
             renderPlena();
-            renderScheduleCard(null);
+            renderScheduleCard();
             requestLocation();
         } catch (error) {
             console.error(error);
@@ -196,7 +199,7 @@
             renderMapMarkers();
             render();
             renderPlena();
-            renderScheduleCard(state.selectedPointId ? state.pontos.find(function (p) { return p.id === state.selectedPointId; }) || state.pontosPlena.find(function (p) { return p.id === state.selectedPointId; }) : null);
+            renderScheduleCard();
             requestLocation();
             hideSplash();
         }).catch(function () {
@@ -220,7 +223,7 @@
 
         if (els.searchMobileBtn) {
             els.searchMobileBtn.addEventListener('click', function () {
-                if (els.searchBox) els.searchBox.classList.toggle('mobile-open');
+                toggleMobileSearch(true);
                 if (els.searchInput) els.searchInput.focus();
             });
         }
@@ -240,8 +243,13 @@
             }
         });
 
+        setupMobileSearchDismiss();
+
         document.addEventListener('click', function (event) {
-            if (!event.target.closest('.search-box')) hideSearchSuggestions();
+            if (!event.target.closest('.search-box')) {
+                hideSearchSuggestions();
+                toggleMobileSearch(false);
+            }
             if (event.target.closest('.sidebar-link')) closeSidebar();
         });
 
@@ -428,6 +436,7 @@
             function () {
                 if (state.distanceCache) state.distanceCache.invalidate();
                 if (state.distanceCachePlena) state.distanceCachePlena.invalidate();
+                state.gpsDenied = true;
                 if (els.locationStatus) els.locationStatus.textContent = 'GPS NEGADO';
                 render();
                 renderPlena();
@@ -578,7 +587,7 @@
             '</div>',
             '<div class="card-header-right">',
             '<span class="point-distance">' + escapeHtml(distancia) + '</span>',
-            '<button class="fav-btn' + (isFav ? ' favorited' : '') + '" data-id="' + ponto.id + '" aria-label="Favoritar">',
+            '<button class="fav-btn' + (isFav ? ' favorited' : '') + '" data-id="' + ponto.id + '" aria-label="' + (isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos') + '">',
             '<i class="ti ti-' + (isFav ? 'heart-filled' : 'heart') + '"></i>',
             '</button>',
             '</div>',
@@ -733,7 +742,7 @@
         if (els.selectedDistance) els.selectedDistance.textContent = getDistanceText(ponto);
         if (els.selectedAddress) els.selectedAddress.textContent = ponto.endereco + ' - ' + (ponto.bairro || '');
 
-        renderScheduleCard(ponto);
+        renderScheduleCard();
         markSelectedCard();
         focusPointOnMap(ponto);
 
@@ -928,9 +937,18 @@
         if (!els.nearbyPriorityGrid) return;
         if (!state.userPosition) {
             els.nearbyPriorityGrid.style.setProperty('--nearby-columns', '1');
-            els.nearbyPriorityGrid.innerHTML = '<div class="nearby-priority-empty"><i class="ti ti-location"></i><span>Permita a localização para ordenar e selecionar automaticamente o ponto mais próximo.</span></div>';
-            if (els.nearbyPriorityStatus) els.nearbyPriorityStatus.textContent = 'Aguardando GPS';
-            if (els.nearbyPriorityActions) els.nearbyPriorityActions.innerHTML = '';
+            var gpsMsg = state.gpsDenied
+                ? gpsDeniedHelp()
+                : 'Permita a localização para ordenar e selecionar automaticamente o ponto mais próximo.';
+            els.nearbyPriorityGrid.innerHTML = '<div class="nearby-priority-empty"><i class="ti ti-location"></i><span>' + escapeHtml(gpsMsg) + '</span></div>';
+            if (els.nearbyPriorityStatus) els.nearbyPriorityStatus.textContent = state.gpsDenied ? 'GPS negado' : 'Aguardando GPS';
+            if (els.nearbyPriorityActions) {
+                els.nearbyPriorityActions.innerHTML = state.gpsDenied
+                    ? '<button type="button" class="nearby-toggle-btn" id="nearbyGpsRetry"><i class="ti ti-refresh"></i>Tentar novamente</button>'
+                    : '';
+                var retry = els.nearbyPriorityActions.querySelector('#nearbyGpsRetry');
+                if (retry) retry.addEventListener('click', function () { requestLocation(); });
+            }
             return;
         }
         var allNearby = ordered.filter(function (p) {
@@ -967,15 +985,6 @@
     /* ========================================
        SCHEDULE CARD (Circular + Plena)
        ======================================== */
-
-    function subtractMinutes(timeStr, minutes) {
-        var parts = timeStr.split(':');
-        var total = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10) - minutes;
-        if (total < 0) total += 1440;
-        var h = Math.floor(total / 60);
-        var m = total % 60;
-        return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
-    }
 
     function computeNextForSchedule() {
         if (state.scheduleLinha === 'plena' && state.scheduleSentidoPlena) {
@@ -1028,21 +1037,17 @@
         return getNextDeparture(state.horarios);
     }
 
-    function renderScheduleCard(ponto) {
+    function renderScheduleCard() {
         var next = computeNextForSchedule();
 
         if (els.selectedLine) {
-            if (state.selectedPointId) {
-                els.selectedLine.textContent = state.scheduleLinha === 'plena' ? 'Plena' : 'Rota Circular';
-            } else {
-                els.selectedLine.textContent = state.scheduleLinha === 'plena' ? 'Plena' : 'Rota Circular';
-            }
+            els.selectedLine.textContent = state.scheduleLinha === 'plena' ? 'Plena' : 'Rota Circular';
         }
         if (els.selectedNext) els.selectedNext.textContent = state.selectedPointId ? next.label : 'Selecione um ponto';
 
         renderLineSelector();
         renderDirectionSelector();
-        renderScheduleTable(next.time);
+        renderScheduleTable();
 
         if (els.scheduleNote) {
             if (state.selectedPointId && next.time && next.time !== '--') {
@@ -1094,7 +1099,7 @@
                 }
 
                 state.scheduleDiaTab = 'uteis';
-                renderScheduleCard(null);
+                renderScheduleCard();
             });
         });
     }
@@ -1133,12 +1138,12 @@
             btn.addEventListener('click', function () {
                 state.scheduleSentidoPlena = this.getAttribute('data-sentido');
                 state.scheduleDiaTab = 'uteis';
-                renderScheduleCard(null);
+                renderScheduleCard();
             });
         });
     }
 
-    function renderScheduleTable(nextTime) {
+    function renderScheduleTable() {
         var container = els.scheduleDynamicContent;
         if (!container) return;
         var html = '', abas = [], horarios = [];

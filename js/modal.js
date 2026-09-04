@@ -28,7 +28,7 @@
     modalEl.className = 'modal-overlay';
     modalEl.innerHTML =
       '<div class="modal-backdrop"></div>' +
-      '<div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="modalTitle">' +
+      '<div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalAddress">' +
         '<div class="modal-header">' +
           '<div class="modal-header-text">' +
             '<h2 class="modal-title" id="modalTitle"></h2>' +
@@ -73,6 +73,7 @@
       Favorites.toggleFavorite(id);
       var isFav = Favorites.isFavorite(id);
       this.classList.toggle('favorited', isFav);
+      this.setAttribute('aria-label', isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos');
       var icon = this.querySelector('i');
       if (icon) {
         icon.classList.remove('ti-heart', 'ti-heart-filled');
@@ -244,6 +245,7 @@
     var favBtn = modalEl.querySelector('#modalFavBtn');
     favBtn.setAttribute('data-id', data.ponto.id);
     favBtn.classList.toggle('favorited', !!data.isFav);
+    favBtn.setAttribute('aria-label', data.isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos');
     var icon = favBtn.querySelector('i');
     if (icon) {
       icon.classList.remove('ti-heart', 'ti-heart-filled');

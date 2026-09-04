@@ -1184,15 +1184,23 @@ body {
     justify-content: center;
     gap: 10px;
     min-height: 86px;
+    padding: 16px;
     color: var(--text-muted);
     font-size: 12px;
+    line-height: 1.5;
+    text-align: left;
     border: 1px dashed var(--border);
     border-radius: var(--radius-md)
 }
 
 .nearby-priority-empty i {
     color: var(--red);
-    font-size: 20px
+    font-size: 20px;
+    flex-shrink: 0
+}
+
+.nearby-priority-empty span {
+    max-width: 640px
 }
 
 .other-points-section {
@@ -1298,6 +1306,26 @@ body {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 8px
+}
+
+#scheduleDynamicContent {
+    animation: scheduleFadeIn 0.25s ease both;
+}
+
+.schedule-timeline .schedule-time-card,
+.schedule-day-tab {
+    animation: scheduleFadeIn 0.25s ease both;
+}
+
+.schedule-timeline .schedule-time-card:nth-child(2) { animation-delay: 0.04s; }
+.schedule-timeline .schedule-time-card:nth-child(3) { animation-delay: 0.08s; }
+.schedule-timeline .schedule-time-card:nth-child(4) { animation-delay: 0.12s; }
+.schedule-timeline .schedule-time-card:nth-child(5) { animation-delay: 0.16s; }
+.schedule-timeline .schedule-time-card:nth-child(6) { animation-delay: 0.20s; }
+
+@keyframes scheduleFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .schedule-time-card {
