@@ -1236,11 +1236,13 @@ body.modal-open {
     position: fixed;
     inset: 0;
     z-index: 9999;
-    background: var(--bg-primary);
+    background:
+        radial-gradient(ellipse at 50% 45%, rgba(229, 57, 53, 0.10) 0%, rgba(229, 57, 53, 0) 60%),
+        var(--bg-primary);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: opacity 0.4s ease, visibility 0s 0.4s;
+    transition: opacity 0.5s ease, visibility 0s 0.5s;
 }
 
 .splash.hide {
@@ -1251,49 +1253,139 @@ body.modal-open {
 
 .splash-content {
     text-align: center;
+    padding: 24px;
 }
 
-.splash-icon {
-    width: 72px;
-    height: 72px;
-    background: var(--red);
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 20px;
+/* --- Logo with entrance + pulse --- */
+.splash-logo {
+    position: relative;
+    width: 96px;
+    height: 96px;
+    margin: 0 auto 28px;
+    animation: splashPop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-.splash-icon i {
-    color: #fff;
-    font-size: 36px;
+.splash-logo-img {
+    position: relative;
+    z-index: 2;
+    width: 96px;
+    height: 96px;
+    border-radius: 26px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 32px rgba(229, 57, 53, 0.45);
+    animation: splashPulse 2.2s ease-in-out infinite;
 }
 
-.splash-title {
-    font-size: 28px;
-    font-weight: 800;
-    color: var(--text-primary);
-    margin-bottom: 6px;
+.splash-ring {
+    position: absolute;
+    inset: -6px;
+    z-index: 1;
+    border-radius: 32px;
+    background: conic-gradient(from 0deg, var(--red), transparent 40%, var(--red));
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+    animation: splashSpin 2.4s linear infinite;
+    opacity: 0.8;
 }
 
-.splash-sub {
-    font-size: 13px;
-    color: var(--text-muted);
-    margin-bottom: 24px;
+@keyframes splashPop {
+    0%   { transform: scale(0.5); opacity: 0; }
+    60%  { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
 }
 
-.splash-spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid var(--border);
-    border-top-color: var(--red);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto;
+@keyframes splashPulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.04); }
 }
 
-@keyframes spin {
+@keyframes splashSpin {
     to { transform: rotate(360deg); }
+}
+
+/* --- Title with shimmer --- */
+.splash-title {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+    animation: splashFadeUp 0.7s ease 0.15s both;
+}
+
+.splash-brand {
+    background: linear-gradient(90deg, #fff, #e0e0e0, #fff);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: splashShimmer 2.6s linear infinite;
+}
+
+.splash-brand.red {
+    -webkit-text-fill-color: var(--red);
+    color: var(--red);
+    animation: none;
+}
+
+@keyframes splashShimmer {
+    to { background-position: -200% center; }
+}
+
+/* --- Subtitle with animated dots --- */
+.splash-sub {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 30px;
+    animation: splashFadeUp 0.7s ease 0.3s both;
+}
+
+.splash-dots::after {
+    content: '';
+    animation: splashDots 1.2s steps(4, end) infinite;
+    display: inline-block;
+    width: 20px;
+    text-align: left;
+}
+
+@keyframes splashDots {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+}
+
+/* --- Progress bar --- */
+.splash-progress {
+    position: relative;
+    width: 180px;
+    height: 4px;
+    margin: 0 auto;
+    border-radius: 999px;
+    background: var(--border);
+    overflow: hidden;
+    animation: splashFadeUp 0.7s ease 0.45s both;
+}
+
+.splash-progress-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 40%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--red-dark), var(--red), var(--red-light));
+    box-shadow: 0 0 10px rgba(229, 57, 53, 0.7);
+    animation: splashProgress 1.6s ease-in-out infinite;
+}
+
+@keyframes splashProgress {
+    0%   { left: -40%; }
+    100% { left: 100%; }
+}
+
+@keyframes splashFadeUp {
+    0%   { transform: translateY(14px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
 }
 
 /* ===================== BACK TO TOP ===================== */

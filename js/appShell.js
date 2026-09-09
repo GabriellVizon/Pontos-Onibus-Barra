@@ -71,10 +71,13 @@
 
             '<div id="splash" class="splash">' +
                 '<div class="splash-content">' +
-                    '<div class="splash-icon"><i class="ti ti-bus"></i></div>' +
-                    '<h1 class="splash-title">BarraBus</h1>' +
-                    '<p class="splash-sub">Carregando...</p>' +
-                    '<div class="splash-spinner"></div>' +
+                    '<div class="splash-logo">' +
+                        '<img src="img/realista-point.png" alt="BarraBus" class="splash-logo-img">' +
+                        '<div class="splash-ring"></div>' +
+                    '</div>' +
+                    '<h1 class="splash-title"><span class="splash-brand">Barra</span><span class="splash-brand red">Bus</span></h1>' +
+                    '<p class="splash-sub">Carregando sua jornada<span class="splash-dots"></span></p>' +
+                    '<div class="splash-progress"><div class="splash-progress-bar"></div></div>' +
                 '</div>' +
             '</div>' +
 
@@ -135,6 +138,7 @@
             (showFab ? _buildFab() : '');
 
         document.body.innerHTML = bodyShell;
+        window.__splashStart = Date.now();
 
         if (showFooter) {
             var yearEl = document.getElementById('footerYear');

@@ -176,11 +176,15 @@ function saveCache(pontos, horarios) {
   } catch (e) {}
 }
 
+var MIN_SPLASH_VISIBLE = 2200;
+
 function hideSplash() {
+  var elapsed = window.__splashStart ? (Date.now() - window.__splashStart) : 0;
+  var wait = Math.max(0, MIN_SPLASH_VISIBLE - elapsed);
   setTimeout(function () {
     var el = document.getElementById('splash');
     if (el) el.classList.add('hide');
-  }, 500);
+  }, wait);
 }
 
 function setupBackToTop() {
