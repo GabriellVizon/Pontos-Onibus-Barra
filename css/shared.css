@@ -16,6 +16,7 @@
     --blue: #2196f3;
     --blue-light: #42a5f5;
     --blue-dark: #1565c0;
+    --blue-bg: rgba(33, 150, 243, 0.12);
     --green: #4caf50;
     --text-primary: #ffffff;
     --text-secondary: #aaaaaa;
@@ -421,6 +422,7 @@ body.modal-open {
     --bg-hover: #fde8e8;
     --border: #d4d4d4;
     --border-light: #d4d4d4;
+    --blue-bg: #e3f2fd;
     --text-primary: #000000;
     --text-secondary: #333333;
     --text-muted: #666666;
@@ -492,6 +494,22 @@ body.modal-open {
 
 [data-theme="light"] .leaflet-popup-content strong {
     color: #333333;
+}
+
+/* ===== SPLASH no modo claro ===== */
+[data-theme="light"] .splash-logo-img {
+    content: url('../img/realista-point.modoclaro.png');
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12), 0 8px 32px rgba(229, 57, 53, 0.35);
+}
+
+[data-theme="light"] .splash-brand {
+    background: linear-gradient(90deg, #111111, #5a5a5a, #111111);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: splashShimmer 2.6s linear infinite;
 }
 
 /* ===================== MODAL ===================== */
@@ -852,7 +870,7 @@ body.modal-open {
     flex: 1;
     min-width: 60px;
     padding: 8px 0;
-    background: var(--bg-hover);
+    background: var(--blue-bg);
     color: var(--text-primary);
     border: 1px solid var(--border-light);
     border-radius: var(--radius-md);

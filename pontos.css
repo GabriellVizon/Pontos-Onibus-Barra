@@ -472,7 +472,12 @@
 .point-card[data-linha="plena"]:hover,
 .point-card[data-linha="plena"].selected {
     border-color: var(--blue);
-    background: var(--bg-hover);
+    background: var(--blue-bg);
+}
+
+.point-card[data-linha="plena"] .point-next-bus {
+    background: var(--blue-bg);
+    border-color: rgba(33, 150, 243, 0.25);
 }
 
 .point-card-header {
