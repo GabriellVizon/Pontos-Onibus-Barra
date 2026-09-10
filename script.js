@@ -4,7 +4,7 @@ const state = {
   pontos: [],
   horarios: [],
   userPosition: null,
-  gpsDenied: false,
+  gpsDenied: (typeof getGpsDeniedPersisted === 'function') ? getGpsDeniedPersisted() : false,
   selectedStopId: null,
   map: null,
   markerLayer: null,
@@ -61,6 +61,7 @@ async function init() {
     });
   }
   setInterval(refreshLiveDepartures, 30000);
+  setInterval(reperguntarLocalizacao, 5 * 60 * 1000);
 
   var cached = loadCache();
   var modalInited = false;
@@ -89,6 +90,7 @@ async function init() {
     if (cached) {
       state.pontos = cached.pontos;
       state.horarios = cached.horarios;
+      if (typeof setPontosCircular === 'function') setPontosCircular(state.pontos);
       if (state.distanceCache) state.distanceCache.invalidate();
       initModalOnce();
       renderAll();
@@ -102,7 +104,7 @@ async function init() {
     }
     initModalOnce();
     renderAll();
-    requestUserLocation();
+    reperguntarLocalizacao();
   } catch (error) {
     console.error(error);
     if (!cached) {
@@ -129,6 +131,7 @@ async function carregarDados() {
 
   state.pontos = pontos;
   state.horarios = horarios;
+  if (typeof setPontosCircular === 'function') setPontosCircular(state.pontos);
 }
 
 function setupNavigation() {
@@ -175,7 +178,7 @@ function setupNavigation() {
 }
 
 function setupInteractions() {
-  els.heroBtn?.addEventListener('click', () => requestUserLocation({ scrollToNearby: true }));
+  els.heroBtn?.addEventListener('click', () => reperguntarLocalizacao({ scrollToNearby: true }));
 
   document.addEventListener('click', (event) => {
     const action = event.target.closest('[data-action]');
@@ -414,8 +417,8 @@ function renderNearbyStops() {
 }
 
 function renderStopCard(ponto) {
-  const next = encontrarPassagens(ponto.id);
-  const horariosLinha = getHorario(state.horarios, getCurrentDayType());
+  const pass = encontrarPassagens(ponto.id);
+  const horariosLinha = obterHorariosDoPonto(ponto.id);
   const distanceText = typeof ponto.distancia === 'number'
     ? formatDistance(ponto.distancia)
     : hasCoords(ponto)
@@ -427,7 +430,23 @@ function renderStopCard(ponto) {
     ? `https://www.google.com/maps/dir/?api=1&destination=${ponto.lat},${ponto.lng}`
     : '';
   const isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
-  const nextClass = next.minutosRestantes <= 5 ? 'now' : 'waiting';
+  const nextClass = pass.encontrado
+    ? (pass.situacao === 'no_ponto' ? 'now' : 'waiting')
+    : 'waiting';
+  const nextTimeText = pass.encontrado
+    ? pass.horario
+    : (pass.mensagem || 'Sem horário');
+  const rangeChip = pass.encontrado && pass.faixa
+    ? `<span class="meta-chip range-chip" title="Janela de previsão (±3 min)">≈ ${escapeHtml(pass.faixa.label)}</span>`
+    : '';
+
+  const agoraHoje = timeToMinutes(new Date());
+  const chipsProximos = horariosLinha.filter((horario) => {
+    const m = timeToMinutes(horario);
+    return m !== null && m >= agoraHoje;
+  });
+  const chipsVisiveis = chipsProximos.slice(0, 4);
+  const chipsExtras = Math.max(0, chipsProximos.length - 4);
 
   return `
     <div class="card stop-card ${selected}" data-stop-id="${ponto.id}">
@@ -446,17 +465,19 @@ function renderStopCard(ponto) {
       <p class="card-address">${escapeHtml(ponto.endereco)}</p>
       <div class="card-next-bus">
         <span class="card-next-label"><i class="ti ti-bus"></i> Próximo ônibus</span>
-        <span class="card-next-time ${nextClass}">${escapeHtml(next.horario)}</span>
+        <span class="card-next-time ${nextClass}" title="${pass.faixa ? 'Previsto entre ' + escapeAttr(pass.faixa.label) : ''}">${escapeHtml(nextTimeText)}</span>
       </div>
       <div class="card-meta">
         <span class="meta-chip">${escapeHtml(ponto.bairro)}</span>
+        ${rangeChip}
       </div>
       <div class="card-horarios">
-        ${horariosLinha
+        ${chipsVisiveis
           .map((horario) => `
-            <span class="time-chip ${horario === next.time ? 'active' : 'inactive'}">${escapeHtml(horario)}</span>
+            <span class="time-chip ${pass.encontrado && horario === pass.horario ? 'active' : 'inactive'}">${escapeHtml(horario)}</span>
           `)
           .join('')}
+        ${chipsExtras > 0 ? `<span class="time-chip more-chip">+${chipsExtras}</span>` : ''}
       </div>
       <div class="card-actions">
         <button class="card-action" type="button" data-action="focus-map" ${mapDisabled}>
@@ -552,6 +573,22 @@ function renderMapMarkers() {
   }
 }
 
+function reperguntarLocalizacao(options = {}) {
+  if (state.userPosition) return;
+
+  shouldRequestLocation().then(function (podePedir) {
+    if (podePedir) {
+      requestUserLocation(options);
+      return;
+    }
+    // Navegador persistiu a recusa: mantém o estado e o banner sem chamada inútil.
+    state.gpsDenied = true;
+    if (typeof setGpsDeniedPersisted === 'function') setGpsDeniedPersisted(true);
+    setLocationStatus('Permissão negada', 'Libere pelo cadeado e tente novamente', '--');
+    renderNearbyStops();
+  });
+}
+
 function requestUserLocation(options = {}) {
   if (!navigator.geolocation) {
     setLocationStatus('GPS indisponível', 'Use a busca manual', '--');
@@ -567,6 +604,8 @@ function requestUserLocation(options = {}) {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
       };
+      state.gpsDenied = false;
+      if (typeof setGpsDeniedPersisted === 'function') setGpsDeniedPersisted(false);
       if (state.distanceCache) state.distanceCache.invalidate();
 
       setLocationStatus('Localização detectada', 'Calculando...', '--');
@@ -581,6 +620,7 @@ function requestUserLocation(options = {}) {
     (error) => {
       if (state.distanceCache) state.distanceCache.invalidate();
       state.gpsDenied = error.code === error.PERMISSION_DENIED;
+      if (typeof setGpsDeniedPersisted === 'function') setGpsDeniedPersisted(state.gpsDenied);
       const message = state.gpsDenied
         ? 'Permissão negada'
         : 'Não foi possível localizar';
@@ -629,11 +669,12 @@ function updateLocationSummary() {
     return;
   }
 
-  const next = getNextDeparture(state.horarios);
+  const pass = encontrarPassagens(nearest.id);
+  const nextTime = pass.encontrado ? pass.horario : (pass.mensagem ? pass.mensagem : '--');
   setLocationStatus(
     'Localização detectada',
     `${nearest.nome} (${formatDistance(nearest.distancia)})`,
-    next.horario,
+    nextTime,
   );
 
   if (!state.selectedStopId) {
@@ -645,8 +686,11 @@ function openStopModal(stopId) {
   const ponto = state.pontos.find(function (p) { return p.id === stopId; });
   if (!ponto) return;
 
-  const next = getNextDeparture(state.horarios);
-  const horarios = getHorario(state.horarios, getCurrentDayType());
+  const pass = encontrarPassagens(ponto.id);
+  const next = pass.encontrado
+    ? { time: pass.horario, label: pass.label, minutes: pass.minutos, faixa: pass.faixa, situacao: pass.situacao }
+    : { time: '--', label: pass.mensagem || 'Sem horário', minutes: Number.POSITIVE_INFINITY, faixa: null, situacao: pass.situacao };
+  const horarios = obterHorariosDoPonto(ponto.id);
   const isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
 
   let distancia = null;
@@ -690,8 +734,11 @@ function selectStop(stopId, options = {}) {
 
   if (els.selectedStopName) els.selectedStopName.textContent = ponto.nome;
   if (els.selectedStopDetails) {
+    const nextText = next.encontrado
+      ? `próxima passagem ${next.horario}`
+      : (next.mensagem || 'sem ônibus hoje');
     els.selectedStopDetails.textContent = hasCoords(ponto)
-      ? `${ponto.endereco} - próxima saída ${next.horario}`
+      ? `${ponto.endereco} - ${nextText}`
       : `${ponto.endereco} - este ponto ainda não tem latitude e longitude.`;
   }
 
@@ -712,27 +759,35 @@ function setLocationStatus(location, nearest, departure) {
 }
 
 function refreshLiveDepartures() {
-  if (!state.horarios) return;
+  if (typeof encontrarPassagens !== 'function') return;
 
   document.querySelectorAll('.stop-card').forEach((card) => {
     const stopId = Number(card.dataset.stopId);
-    const next = encontrarPassagens(stopId);
+    const pass = encontrarPassagens(stopId);
 
     const timeEl = card.querySelector('.card-next-time');
-
     if (timeEl) {
-      if (!next.encontrado) {
-        timeEl.textContent = 'Sem horário';
-        timeEl.classList.remove('now', 'waiting');
-        return;
-      }
-
-      timeEl.textContent = next.horario;
       timeEl.classList.remove('now', 'waiting');
-      timeEl.classList.add(
-        next.minutosRestantes <= 5 ? 'now' : 'waiting'
-      );
+      if (!pass.encontrado) {
+        timeEl.textContent = pass.mensagem || 'Sem horário';
+      } else {
+        timeEl.textContent = pass.horario;
+        timeEl.classList.add(pass.situacao === 'no_ponto' ? 'now' : 'waiting');
+        timeEl.title = pass.faixa ? 'Previsto entre ' + pass.faixa.label : '';
+      }
     }
+
+    const rangeEl = card.querySelector('.range-chip');
+    if (rangeEl) {
+      rangeEl.textContent = pass.encontrado && pass.faixa ? '≈ ' + pass.faixa.label : '';
+    }
+
+    const chips = card.querySelectorAll('.card-horarios .time-chip');
+    chips.forEach((chip) => {
+      const isActive = pass.encontrado && chip.textContent.trim() === pass.horario;
+      chip.classList.toggle('active', isActive);
+      chip.classList.toggle('inactive', !isActive);
+    });
   });
 
   if (state.selectedStopId && els.selectedStopDetails) {
@@ -741,12 +796,13 @@ function refreshLiveDepartures() {
     );
 
     if (ponto && hasCoords(ponto)) {
-      const next = encontrarPassagens(state.selectedStopId);
+      const pass = encontrarPassagens(state.selectedStopId);
+      const faixaText = pass.encontrado && pass.faixa ? ` (previsto ${pass.faixa.label})` : '';
 
       els.selectedStopDetails.textContent =
-        next.encontrado
-          ? `${ponto.endereco} - próxima passagem ${next.horario}`
-          : `${ponto.endereco} - sem mais horários hoje.`;
+        pass.encontrado
+          ? `${ponto.endereco} - próxima passagem ${pass.horario}${faixaText}`
+          : `${ponto.endereco} - ${pass.mensagem || 'sem ônibus hoje.'}`;
     }
   }
 }

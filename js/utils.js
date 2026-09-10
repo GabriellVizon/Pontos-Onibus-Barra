@@ -394,3 +394,58 @@ function setupMobileSearchDismiss() {
 function gpsDeniedHelp() {
   return 'Para ativar, clique no ícone de cadeado (ou nas configurações do navegador) ao lado da barra de endereço e permita o acesso à sua localização. Depois toque em "Usar minha localização" novamente.';
 }
+
+/* ========================================
+   GPS PERMISSION PERSISTENTE + RE-PERQUISA
+   ========================================
+   O navegador persiste a recusa e não re-exibe o prompt nativo até o usuário
+   liberar nos ajustes. Guardamos a recusa no localStorage para o app continuar
+   exibindo o estado, e repedimos automaticamente mais tarde (se o navegador
+   voltar a permitir, o prompt nativo reaparece e a gente captura a posição).
+   ======================================== */
+
+var GPS_DENIED_KEY = 'barrabus:gps-denied';
+
+function getGpsDeniedPersisted() {
+  try {
+    return localStorage.getItem(GPS_DENIED_KEY) === '1';
+  } catch (e) {
+    return false;
+  }
+}
+
+function setGpsDeniedPersisted(value) {
+  try {
+    if (value) {
+      localStorage.setItem(GPS_DENIED_KEY, '1');
+    } else {
+      localStorage.removeItem(GPS_DENIED_KEY);
+    }
+  } catch (e) {
+    // storage indisponível (modo privado/restrito) — segue sem persistir
+  }
+}
+
+// Estado atual da permissão: 'granted' | 'prompt' | 'denied' | 'unsupported'
+function queryGeolocationPermission() {
+  return new Promise(function (resolve) {
+    if (typeof navigator === 'undefined' || !navigator.permissions || typeof navigator.permissions.query !== 'function') {
+      resolve('unsupported');
+      return;
+    }
+    navigator.permissions.query({ name: 'geolocation' }).then(function (status) {
+      resolve(status.state);
+    }).catch(function () {
+      resolve('unsupported');
+    });
+  });
+}
+
+// Decide se pode/deve pedir a localização de novo sem gastar chamadas inúteis.
+// Retorna true se a UI deve proceder com getCurrentPosition.
+function shouldRequestLocation() {
+  return queryGeolocationPermission().then(function (state) {
+    if (state === 'denied') return false;      // não vale chamar: falha instantânea
+    return true;                               // 'prompt' | 'granted' | 'unsupported'
+  });
+}

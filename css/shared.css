@@ -10,10 +10,12 @@
     --bg-hover: #1e1e1e;
     --border: #2a2a2a;
     --border-light: #2a2a2a;
-    --red: #e53935;
+--red: #e53935;
     --red-light: #ff5252;
     --red-dark: #8b0000;
-    --yellow: #e8f44d;
+    --blue: #2196f3;
+    --blue-light: #42a5f5;
+    --blue-dark: #1565c0;
     --green: #4caf50;
     --text-primary: #ffffff;
     --text-secondary: #aaaaaa;
@@ -24,6 +26,7 @@
     --radius-xl: 20px;
     --radius-full: 24px;
     --shadow-red: 0 4px 12px rgba(229, 57, 53, 0.4);
+    --shadow-blue: 0 4px 12px rgba(33, 150, 243, 0.4);
 }
 
 /* ===================== BASE RESET ===================== */
@@ -699,6 +702,7 @@ body.modal-open {
     font-weight: 800;
     color: #fff;
     line-height: 1;
+    white-space: nowrap;
 }
 
 .next-bus-pill {
@@ -1049,6 +1053,43 @@ body.modal-open {
     box-shadow: var(--shadow-red);
 }
 
+/* Plena: acentos azuis no modal (Circular fica vermelho, o padrão) */
+.modal-overlay.plena-theme .next-bus-card {
+    box-shadow: var(--shadow-blue);
+    border-left-color: rgba(33, 150, 243, 0.4);
+}
+
+.modal-overlay.plena-theme .modal-tab-btn.active {
+    background: var(--blue);
+    border-color: var(--blue);
+    box-shadow: var(--shadow-blue);
+}
+
+.modal-overlay.plena-theme .modal-tab-btn:not(.active):hover {
+    border-color: var(--blue);
+}
+
+.modal-overlay.plena-theme .action-btn-red {
+    background: var(--blue);
+    box-shadow: var(--shadow-blue);
+}
+
+.modal-overlay.plena-theme .action-btn-outline:hover {
+    border-color: var(--blue);
+}
+
+.modal-overlay.plena-theme .line-selector-btn.active {
+    background: var(--blue);
+    border-color: var(--blue);
+    box-shadow: var(--shadow-blue);
+}
+
+.modal-overlay.plena-theme .modal-time.modal-time-active {
+    background: var(--blue);
+    border-color: var(--blue);
+    box-shadow: var(--shadow-blue);
+}
+
 .tab-empty {
     color: var(--text-muted);
     font-size: 13px;
@@ -1221,13 +1262,25 @@ body.modal-open {
         padding: 14px;
     }
     .next-bus-time {
-        font-size: 32px;
+        font-size: 28px;
     }
     .next-bus-main i {
-        font-size: 32px;
+        font-size: 28px;
     }
     .modal-mini-map {
         height: 160px;
+    }
+}
+
+@media (max-width: 360px) {
+    .next-bus-main {
+        gap: 8px;
+    }
+    .next-bus-main i {
+        font-size: 24px;
+    }
+    .next-bus-time {
+        font-size: 24px;
     }
 }
 
@@ -1603,6 +1656,7 @@ body:has(.fab) .back-to-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 10px;
     background: var(--bg-hover);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
@@ -1631,9 +1685,11 @@ body:has(.fab) .back-to-top {
 .card-next-time {
     font-size: 16px;
     font-weight: 800;
-    line-height: 1;
+    line-height: 1.3;
     white-space: nowrap;
-    flex-shrink: 0;
+    text-align: right;
+    flex-shrink: 1;
+    min-width: 0;
 }
 
 .card-next-time.now {
@@ -1642,6 +1698,28 @@ body:has(.fab) .back-to-top {
 
 .card-next-time.waiting {
     color: var(--red);
+}
+
+@media (max-width: 1024px) {
+    .card-next-time {
+        font-size: 15px;
+    }
+    .card-next-label {
+        font-size: 10px;
+        letter-spacing: 0.02em;
+    }
+}
+
+@media (max-width: 768px) {
+    .card-next-time {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .card-next-time {
+        font-size: 13px;
+    }
 }
 
 .card-meta {
@@ -1659,6 +1737,50 @@ body:has(.fab) .back-to-top {
     font-size: 11px;
     font-weight: 600;
     padding: 4px 8px;
+}
+
+.meta-chip.range-chip {
+    color: var(--text-secondary-muted, var(--text-secondary));
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.next-bus-faixa {
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+/* Estimate / transparency notice */
+.estimate-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 14px 0;
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--text-secondary);
+}
+
+.estimate-notice i {
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: var(--yellow);
+}
+
+.estimate-notice strong {
+    color: var(--text-primary);
+}
+
+@media (prefers-color-scheme: dark) {
+    .estimate-notice i { color: #f7ec78; }
 }
 
 /* ===================== CARD ACTIONS ===================== */
@@ -1741,6 +1863,13 @@ body:has(.fab) .back-to-top {
     background: transparent;
     color: var(--text-muted);
     border: 1px solid var(--border);
+}
+
+.time-chip.more-chip {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px dashed var(--border);
+    font-weight: 600;
 }
 
 /* ===================== LEAFLET POPUP ===================== */

@@ -62,6 +62,10 @@
 }
 
 /* ========== LOCATION CARD ========== */
+.estimate-notice {
+    margin: 14px 24px 28px;
+}
+
 .location-card {
     display: flex;
     align-items: center;
@@ -142,6 +146,7 @@
     font-weight: 800;
     font-size: 28px;
     line-height: 1;
+    white-space: nowrap;
 }
 
 /* ========== SECTION ========== */
@@ -376,6 +381,9 @@
         align-items: stretch;
         margin: -20px 12px 0;
     }
+    .estimate-notice {
+        margin: 14px 12px 24px;
+    }
     .location-embark {
         align-items: center;
     }
@@ -402,6 +410,9 @@
     .location-card {
         margin: -20px 8px 0;
         padding: 12px;
+    }
+    .estimate-notice {
+        margin: 14px 8px 24px;
     }
     .section {
         padding: 0 8px;

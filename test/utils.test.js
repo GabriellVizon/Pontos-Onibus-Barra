@@ -174,3 +174,27 @@ test('createDistanceCache calcula e invalida com nova posição', () => {
   const all2 = cache.getAll();
   assert.notStrictEqual(all2[0].distancia, all[0].distancia);
 });
+
+test('gpsDenied persiste o estado de recusa entre sessões', () => {
+  setGpsDeniedPersisted(true);
+  assert.strictEqual(getGpsDeniedPersisted(), true);
+  setGpsDeniedPersisted(false);
+  assert.strictEqual(getGpsDeniedPersisted(), false);
+});
+
+test('queryGeolocationPermission resolve unsupported sem API', async () => {
+  Object.defineProperty(global, 'navigator', {
+    value: { permissions: { query: () => Promise.reject(new Error('falhou')) } },
+    configurable: true,
+  });
+  const state = await queryGeolocationPermission();
+  assert.strictEqual(state, 'unsupported');
+});
+
+test('shouldRequestLocation permite pedir quando não há Permissions API', async () => {
+  Object.defineProperty(global, 'navigator', {
+    value: { permissions: undefined },
+    configurable: true,
+  });
+  assert.strictEqual(await shouldRequestLocation(), true);
+});

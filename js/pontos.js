@@ -6,7 +6,7 @@
         pontosPlena: [],
         horariosPlena: null,
         userPosition: null,
-        gpsDenied: false,
+        gpsDenied: (typeof getGpsDeniedPersisted === 'function') ? getGpsDeniedPersisted() : false,
         selectedPointId: null,
         visibleCount: 5,
         visibleCountPlena: 5,
@@ -85,6 +85,7 @@
             });
         }
         setInterval(refreshLiveDepartures, 30000);
+        setInterval(verificarPermissaoLocalizacao, 5 * 60 * 1000);
 
         var cached = loadCache();
         var modalInited = false;
@@ -114,6 +115,7 @@
             if (cached) {
                 state.pontos = cached.pontos;
                 state.horarios = cached.horarios;
+                if (typeof setPontosCircular === 'function') setPontosCircular(state.pontos);
                 if (state.distanceCache) state.distanceCache.invalidate();
                 initModalOnce();
                 hideSplash();
@@ -128,7 +130,7 @@
             render();
             renderPlena();
             renderScheduleCard();
-            requestLocation();
+            verificarPermissaoLocalizacao();
         } catch (error) {
             console.error(error);
             if (!cached) {
@@ -137,13 +139,14 @@
             if (cached) {
                 state.pontos = cached.pontos;
                 state.horarios = cached.horarios;
+                if (typeof setPontosCircular === 'function') setPontosCircular(state.pontos);
                 if (state.distanceCache) state.distanceCache.invalidate();
                 initModalOnce();
                 initMap();
                 renderMapMarkers();
                 render();
                 renderPlena();
-                requestLocation();
+                verificarPermissaoLocalizacao();
             } else {
                 if (els.pointsGrid) {
                     els.pointsGrid.innerHTML = '<div class="empty-state">Não foi possível carregar os pontos. Abra a página por um servidor local para o fetch funcionar.</div>';
@@ -176,6 +179,8 @@
             state.pontosPlena = Array.isArray(data[2]) ? data[2] : [];
             state.horariosPlena = data[3];
 
+            if (typeof setPontosCircular === 'function') setPontosCircular(state.pontos);
+
             if (state.horariosPlena && typeof carregarConfigPlena === 'function') {
                 carregarConfigPlena(state.horariosPlena);
             }
@@ -200,7 +205,7 @@
             render();
             renderPlena();
             renderScheduleCard();
-            requestLocation();
+            verificarPermissaoLocalizacao();
             hideSplash();
         }).catch(function () {
             hideSplash();
@@ -263,8 +268,13 @@
                 }
                 var card = event.target.closest('[data-point-id]');
                 if (!card) return;
+                var tapped = Number(card.dataset.pointId);
+                if (state.selectedPointId === tapped) {
+                    deselectPoint(false);
+                    return;
+                }
                 cardClickEffect(card, function () {
-                    openPointModal(Number(card.dataset.pointId), 'circular');
+                    openPointModal(tapped, 'circular');
                 });
             });
         }
@@ -272,7 +282,13 @@
         if (els.nearbyPriorityGrid) {
             els.nearbyPriorityGrid.addEventListener('click', function (event) {
                 var card = event.target.closest('[data-point-id]');
-                if (card) selectPoint(Number(card.dataset.pointId), false);
+                if (!card) return;
+                var cid = Number(card.dataset.pointId);
+                if (state.selectedPointId === cid) {
+                    deselectPoint(false);
+                } else {
+                    selectPoint(cid, false);
+                }
             });
         }
         if (els.nearbyPriorityActions) {
@@ -293,8 +309,13 @@
                 }
                 var card = event.target.closest('[data-point-id]');
                 if (!card) return;
+                var tapped = Number(card.dataset.pointId);
+                if (state.selectedPointId === tapped) {
+                    deselectPoint(false);
+                    return;
+                }
                 cardClickEffect(card, function () {
-                    openPointModal(Number(card.dataset.pointId), 'plena');
+                    openPointModal(tapped, 'plena');
                 });
             });
         }
@@ -425,6 +446,8 @@
                     lat: position.coords.latitude,
                     lng: position.coords.longitude
                 };
+                state.gpsDenied = false;
+                if (typeof setGpsDeniedPersisted === 'function') setGpsDeniedPersisted(false);
                 if (state.distanceCache) state.distanceCache.invalidate();
                 if (state.distanceCachePlena) state.distanceCachePlena.invalidate();
                 if (els.locationStatus) els.locationStatus.textContent = 'GPS ATIVO';
@@ -433,16 +456,33 @@
                 renderPlena();
                 selectNearestPoint();
             },
-            function () {
+            function (error) {
                 if (state.distanceCache) state.distanceCache.invalidate();
                 if (state.distanceCachePlena) state.distanceCachePlena.invalidate();
-                state.gpsDenied = true;
-                if (els.locationStatus) els.locationStatus.textContent = 'GPS NEGADO';
+                state.gpsDenied = error && error.code === error.PERMISSION_DENIED;
+                if (typeof setGpsDeniedPersisted === 'function') setGpsDeniedPersisted(state.gpsDenied);
+                if (els.locationStatus) els.locationStatus.textContent = state.gpsDenied ? 'GPS NEGADO' : 'GPS INDISPONÍVEL';
                 render();
                 renderPlena();
             },
             { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
         );
+    }
+
+    function verificarPermissaoLocalizacao() {
+        if (state.userPosition) return;
+        var pedir = typeof shouldRequestLocation === 'function' ? shouldRequestLocation() : Promise.resolve(true);
+        pedir.then(function (podePedir) {
+            if (podePedir) {
+                requestLocation();
+                return;
+            }
+            state.gpsDenied = true;
+            if (typeof setGpsDeniedPersisted === 'function') setGpsDeniedPersisted(true);
+            if (els.locationStatus) els.locationStatus.textContent = 'GPS NEGADO';
+            render();
+            renderPlena();
+        });
     }
 
     /* ========================================
@@ -565,14 +605,32 @@
                 nextClass = 'waiting';
             }
         } else {
-            next = getNextDeparture(state.horarios);
-            nextClass = next.minutes <= 5 ? 'now' : 'waiting';
+            var circ = typeof apresentarProximaCircular === 'function'
+                ? apresentarProximaCircular(ponto.id)
+                : { encontrado: false };
+            if (circ.encontrado) {
+                next = { label: circ.label, minutes: circ.minutos, time: circ.time };
+                nextClass = circ.situacao === 'no_ponto' ? 'now' : 'waiting';
+            } else {
+                next = { label: circ.label || 'Sem horário', minutes: Infinity, time: '--' };
+                nextClass = 'waiting';
+            }
         }
 
         var selected = ponto.id === state.selectedPointId ? ' selected' : '';
         var isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
         var distancia = getDistanceText(ponto, linha);
         var dotColor = linha === 'plena' ? '#2196f3' : BUS_COLOR;
+        var faixaChip = '';
+        if (linha === 'circular') {
+            var circInfo = typeof apresentarProximaCircular === 'function'
+                ? apresentarProximaCircular(ponto.id)
+                : { encontrado: false };
+            if (circInfo.encontrado && circInfo.faixa) {
+                faixaChip = '<span class="point-chip range-chip" title="Janela de previsão (±3 min)">≈ ' +
+                    escapeHtml(circInfo.faixa.label) + '</span>';
+            }
+        }
 
         var linhaTag = linha === 'plena'
             ? '<span class="point-line-tag plena">PLENA</span>'
@@ -599,6 +657,7 @@
             '</div>',
             '<div class="point-meta">',
             '<span class="point-chip">' + escapeHtml(ponto.bairro || '—') + '</span>',
+            faixaChip,
             '</div>',
             '</div>'
         ].join('');
@@ -632,20 +691,10 @@
         }
         if (!ponto) return;
 
-        var linhas = [];
-        if (isPlena) {
-            linhas.push('plena');
-            var circularPoint = state.pontos.find(function (p) {
-                return Math.abs(p.lat - ponto.lat) < 0.0005 && Math.abs(p.lng - ponto.lng) < 0.0005;
-            });
-            if (circularPoint) linhas.unshift('circular');
-        } else {
-            linhas.push('circular');
-            var plenaPoint = state.pontosPlena.find(function (p) {
-                return Math.abs(p.lat - ponto.lat) < 0.0005 && Math.abs(p.lng - ponto.lng) < 0.0005;
-            });
-            if (plenaPoint) linhas.push('plena');
-        }
+        // Cada ponto tem identidade própria: o mesmo local pode ter um ponto
+        // da Circular e outro da Plena (ônibus diferentes). O modal NÃO funde
+        // linhas do mesmo local — cada card abre só a sua.
+        var linhas = [isPlena ? 'plena' : 'circular'];
 
         var next;
         if (isPlena && linhas.length === 1) {
@@ -666,10 +715,23 @@
                 next = { time: '--', label: 'Sem horário', minutes: Infinity };
             }
         } else {
-            next = getNextDeparture(state.horarios);
+            var passC = typeof encontrarPassagens === 'function'
+                ? encontrarPassagens(ponto.id)
+                : { encontrado: false, mensagem: 'Sem horário' };
+            if (passC.encontrado) {
+                next = {
+                    time: passC.horario,
+                    label: passC.label,
+                    minutes: passC.minutosRestantes,
+                    faixa: passC.faixa,
+                    situacao: passC.situacao
+                };
+            } else {
+                next = { time: '--', label: passC.mensagem || 'Sem horário', minutes: Infinity, faixa: null };
+            }
         }
 
-        var horarios = isPlena ? [] : getHorario(state.horarios, getCurrentDayType());
+        var horarios = isPlena ? [] : obterHorariosDoPonto(ponto.id);
         var isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
 
         var distancia = null;
@@ -746,6 +808,23 @@
         markSelectedCard();
         focusPointOnMap(ponto);
 
+        if (!silent) {
+            var detailCard = document.querySelector('.line-detail-card');
+            if (detailCard) detailCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    function deselectPoint(silent) {
+        if (state.selectedPointId == null) return;
+        state.selectedPointId = null;
+        state.scheduleLinha = 'circular';
+        state.scheduleDiaTab = 'uteis';
+        state.scheduleSentidoPlena = null;
+        if (els.selectedPointName) els.selectedPointName.textContent = 'Nenhum ponto selecionado';
+        if (els.selectedDistance) els.selectedDistance.textContent = 'Aguardando localização';
+        if (els.selectedAddress) els.selectedAddress.textContent = 'Permita o GPS para ordenar por proximidade.';
+        renderScheduleCard();
+        markSelectedCard();
         if (!silent) {
             var detailCard = document.querySelector('.line-detail-card');
             if (detailCard) detailCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -947,7 +1026,7 @@
                     ? '<button type="button" class="nearby-toggle-btn" id="nearbyGpsRetry"><i class="ti ti-refresh"></i>Tentar novamente</button>'
                     : '';
                 var retry = els.nearbyPriorityActions.querySelector('#nearbyGpsRetry');
-                if (retry) retry.addEventListener('click', function () { requestLocation(); });
+                if (retry) retry.addEventListener('click', function () { verificarPermissaoLocalizacao(); });
             }
             return;
         }
@@ -1034,11 +1113,42 @@
             }
             return { time: '--', label: 'Sem horário', minutes: Infinity };
         }
-        return getNextDeparture(state.horarios);
+        // CIRCULAR
+        if (state.selectedPointId && typeof encontrarPassagens === 'function') {
+            var passC = encontrarPassagens(state.selectedPointId, null, state.scheduleDiaTab);
+            if (passC.encontrado) {
+                return { time: passC.horario, label: passC.label, minutes: passC.minutosRestantes, situacao: passC.situacao };
+            }
+            return { time: '--', label: passC.mensagem || 'Sem horário', minutes: Infinity };
+        }
+        // Sem ponto selecionado: mostra apenas as saídas do terminal para o dia.
+        var saidasDia = typeof obterSaidasDoDiaCircular === 'function'
+            ? obterSaidasDoDiaCircular(state.scheduleDiaTab)
+            : [];
+        if (saidasDia.length > 0) {
+            var agoraC = new Date();
+            var agoraMinC = agoraC.getHours() * 60 + agoraC.getMinutes();
+            var proximoSC = null;
+            for (var sc = 0; sc < saidasDia.length; sc++) {
+                if (horarioParaMinutos(saidasDia[sc]) >= agoraMinC) { proximoSC = saidasDia[sc]; break; }
+            }
+            if (proximoSC) {
+                var diffC = horarioParaMinutos(proximoSC) - agoraMinC;
+                return {
+                    time: proximoSC,
+                    label: diffC <= 1 ? 'Agora' : (diffC < 60 ? diffC + ' min' : Math.floor(diffC / 60) + 'h'),
+                    minutes: diffC
+                };
+            }
+            return { time: '--', label: 'Encerrado', minutes: Infinity };
+        }
+        return { time: '--', label: 'Não opera neste dia', minutes: Infinity };
     }
 
     function renderScheduleCard() {
         var next = computeNextForSchedule();
+        var scheduleDetailCard = document.querySelector('.line-detail-card');
+        if (scheduleDetailCard) scheduleDetailCard.classList.toggle('is-plena', state.scheduleLinha === 'plena');
 
         if (els.selectedLine) {
             els.selectedLine.textContent = state.scheduleLinha === 'plena' ? 'Plena' : 'Rota Circular';
@@ -1156,8 +1266,18 @@
             if (state.selectedPointId && typeof obterHorariosPlena === 'function') horarios=obterHorariosPlena(state.scheduleSentidoPlena,state.scheduleDiaTab,state.selectedPointId);
             if(!horarios.length&&CONFIG_PLENA&&CONFIG_PLENA.sentidos){var sh=CONFIG_PLENA.sentidos.find(function(x){return x.id===state.scheduleSentidoPlena;});var lista=sh&&sh.horarios?sh.horarios[state.scheduleDiaTab]:[];if(Array.isArray(lista))horarios=lista.slice();}
         } else {
-            if(state.horarios){['uteis','sabado','domingo'].forEach(function(id){if(state.horarios[id]&&state.horarios[id].length)abas.push({id:id,nome:id==='uteis'?'Dias Úteis':id==='sabado'?'Sábado':'Domingo'});});}
-            horarios=getHorario(state.horarios,state.scheduleDiaTab);
+            if (typeof diasComHorariosCircular === 'function') {
+                abas = diasComHorariosCircular();
+            } else if (state.horarios) {
+                ['uteis','sabado','domingo'].forEach(function(id){if(state.horarios[id]&&state.horarios[id].length)abas.push({id:id,nome:id==='uteis'?'Dias Úteis':id==='sabado'?'Sábado':'Domingo'});});
+            }
+            if (state.selectedPointId && typeof obterHorariosDoPonto === 'function') {
+                horarios = obterHorariosDoPonto(state.selectedPointId, state.scheduleDiaTab);
+            } else if (typeof obterSaidasDoDiaCircular === 'function') {
+                horarios = obterSaidasDoDiaCircular(state.scheduleDiaTab);
+            } else if (state.horarios) {
+                horarios = getHorario(state.horarios, state.scheduleDiaTab);
+            }
         }
         if(abas.length>1){html+='<div class="schedule-day-tabs">';abas.forEach(function(a){html+='<button class="schedule-day-tab'+(a.id===state.scheduleDiaTab?' active':'')+'" data-dia="'+a.id+'">'+escapeHtml(a.nome)+'</button>';});html+='</div>';}
         if(!horarios.length) html+='<div class="schedule-empty-msg">Sem horários disponíveis para este dia.</div>';
@@ -1236,7 +1356,7 @@
     }
 
     function refreshLiveDepartures() {
-        if (!state.horarios && state.scheduleLinha !== 'plena') return;
+        if (typeof CONFIG_HORARIOS === 'undefined' && state.scheduleLinha !== 'plena') return;
 
         if (state.selectedPointId != null) {
             var ponto = state.pontos.find(function (p) { return p.id === state.selectedPointId; })
@@ -1254,10 +1374,40 @@
             }
         }
 
-        var fallbackNext = getNextDeparture(state.horarios);
-        document.querySelectorAll('.point-next-time').forEach(function (el) {
-            el.textContent = fallbackNext.label;
-            el.className = 'point-next-time ' + (fallbackNext.minutes <= 5 ? 'now' : 'waiting');
+        document.querySelectorAll('.point-card').forEach(function (card) {
+            var cardId = Number(card.getAttribute('data-point-id'));
+            var cardLinha = card.getAttribute('data-linha') || 'circular';
+            var timeEl = card.querySelector('.point-next-time');
+            var rangeEl = card.querySelector('.range-chip');
+
+            if (cardLinha === 'plena') {
+                if (typeof encontrarProximoPlena === 'function') {
+                    var res = encontrarProximoPlena(cardId);
+                    if (res && res.encontrado) {
+                        if (timeEl) {
+                            timeEl.textContent = res.estado === 'chegando'
+                                ? 'Agora'
+                                : res.minutosRestantes + ' min';
+                            timeEl.className = 'point-next-time ' + (res.minutosRestantes <= 5 ? 'now' : 'waiting');
+                        }
+                    } else if (timeEl) {
+                        timeEl.textContent = 'Sem horário';
+                        timeEl.className = 'point-next-time waiting';
+                    }
+                }
+                return;
+            }
+
+            var circ = typeof apresentarProximaCircular === 'function'
+                ? apresentarProximaCircular(cardId)
+                : null;
+            if (timeEl) {
+                timeEl.textContent = circ && circ.encontrado ? circ.label : (circ ? circ.label : 'Sem horário');
+                timeEl.className = 'point-next-time ' + (circ && circ.situacao === 'no_ponto' ? 'now' : 'waiting');
+            }
+            if (rangeEl) {
+                rangeEl.textContent = circ && circ.encontrado && circ.faixa ? '≈ ' + circ.faixa.label : '';
+            }
         });
     }
 

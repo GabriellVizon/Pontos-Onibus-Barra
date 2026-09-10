@@ -127,6 +127,10 @@
     return modalEl && modalEl.classList.contains('open');
   }
 
+  function applyPlenaTheme() {
+    modalEl.classList.toggle('plena-theme', modalState.linhaSelecionada === 'plena');
+  }
+
   function open(data) {
     currentData = data;
     currentTab = 'horarios';
@@ -141,6 +145,7 @@
 
     modalState.linhaSelecionada = linhaInicial;
     modalState.linhasDisponiveis = linhas;
+    applyPlenaTheme();
 
     if (linhaInicial === 'plena') {
       var sentidos = typeof obterSentidosPlena === 'function'
@@ -233,6 +238,21 @@
       }
       return { time: '--', label: 'Sem dados', minutes: Infinity };
     }
+    // CIRCULAR: cálculo por ponto (com janela ±) — usa o tipo de dia atual, igual à
+    // lista de horários exibida (diaTabPlena pertence à Plena).
+    if (typeof encontrarPassagens === 'function') {
+      var pass = encontrarPassagens(currentData.ponto.id);
+      if (pass.encontrado) {
+        return {
+          time: pass.horario,
+          label: pass.label,
+          minutes: pass.minutosRestantes,
+          situacao: pass.situacao,
+          faixa: pass.faixa
+        };
+      }
+      return { time: '--', label: pass.mensagem || 'Sem horário', minutes: Infinity, situacao: pass.situacao, faixa: null };
+    }
     return getNextDeparture(currentData.horarios);
   }
 
@@ -289,6 +309,7 @@
 
   function onLinhaChange() {
     var linha = modalState.linhaSelecionada;
+    applyPlenaTheme();
 
     renderLineSelector();
 
@@ -381,6 +402,10 @@
 
     var pillColor = modalState.linhaSelecionada === 'plena' ? '#2196f3' : '';
 
+    var faixaHtml = (next && next.faixa)
+      ? '<div class="next-bus-faixa" title="Janela de previsão — sem rastreamento em tempo real">&#8776; ' + escapeHtml(next.faixa.label) + '</div>'
+      : '';
+
     el.innerHTML =
       '<div class="next-bus-card"' + (pillColor ? ' style="background:' + pillColor + '"' : '') + '>' +
         '<div class="next-bus-left">' +
@@ -389,6 +414,7 @@
             '<i class="ti ti-bus"></i>' +
             '<span class="next-bus-time">' + escapeHtml(nextLabel) + '</span>' +
           '</div>' +
+          faixaHtml +
         '</div>' +
         '<div class="next-bus-pill">' +
           '<span class="next-bus-pill-name">' + escapeHtml(pillName) + '</span>' +

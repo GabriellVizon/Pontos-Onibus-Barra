@@ -1,4 +1,4 @@
-const CACHE_NAME = 'barrabus-v7';
+const CACHE_NAME = 'barrabus-v15';
 
 const PRE_CACHE_URLS = [
   '/index.html',
@@ -11,7 +11,7 @@ const PRE_CACHE_URLS = [
   '/js/theme.js',
   '/js/favorites.js',
   '/js/reminders.js',
-  '/js/install.js',
+  '/js/horarios.js',
   '/js/modal.js',
   '/js/appShell.js',
   '/js/bootstrap-home.js',
@@ -19,12 +19,15 @@ const PRE_CACHE_URLS = [
   '/js/pontos.js',
   '/dados/pontos.json',
   '/dados/horarios.json',
+  '/dados/pontos-plena.json',
+  '/dados/horarios-plena.json',
   '/manifest.json',
   '/img/icon-192.png',
   '/img/icon-512.png',
   '/img/apple-touch-icon.png',
   '/img/realista-point.png',
-  '/img/realista-point.modoclaro.png'
+  '/img/realista-point.modoclaro.png',
+  '/img/do-utilizador.png'
 ];
 
 self.addEventListener('install', event => {
@@ -88,14 +91,10 @@ self.addEventListener('fetch', event => {
   }
 
   event.respondWith(
-    caches.open(CACHE_NAME).then(cache =>
-      cache.match(request).then(cached => {
-        const fetched = fetch(request).then(response => {
-          if (response.ok) cache.put(request, response.clone());
-          return response;
-        }).catch(() => cached);
-        return cached || fetched;
-      })
-    )
+    fetch(request).then(response => {
+      const clone = response.clone();
+      caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
+      return response;
+    }).catch(() => caches.match(request))
   );
 });
