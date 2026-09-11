@@ -138,7 +138,7 @@
     "id": 15,
     "ordem": 15,
     "nome": "Banca de Calçados",
-    "endereco": "Rua João Morelatto",
+    "endereco": "R. João Morelato, 198 - Conj. Res. Cel. Jose V. Franca III",
     "bairro": "Sonho Nosso",
     "lat": -22.464936,
     "lng": -48.5631282
@@ -353,7 +353,7 @@
   {
     "id": 42,
     "ordem": 42,
-    "nome": "Em frente ao SADH", 
+    "nome": "Em frente ao SADH",
     "endereco": "200 R. Dirce Manfrinato Romanin",
     "bairro": "",
     "lat": -22.4679933,

@@ -5,6 +5,16 @@
     var timers = {};
     var onFireCallback = null;
 
+    function isCircular(stopId) {
+        if (typeof CONFIG_HORARIOS === 'undefined') return false;
+        if (CONFIG_HORARIOS.correspondencias && CONFIG_HORARIOS.correspondencias[stopId]) return true;
+        return Object.values(CONFIG_HORARIOS.rotas).some(function (rota) {
+            return rota.circuito.concat(rota.inicioEspecial || []).some(function (id) {
+                return String(id) === String(stopId);
+            });
+        });
+    }
+
     function load() {
         try {
             var raw = localStorage.getItem(STORAGE_KEY);
@@ -64,6 +74,7 @@
     }
 
     function add(opts) {
+        if (opts && isCircular(opts.stopId)) return null;
         var departure = opts && opts.departure;
         var minutesBefore = Number(opts && opts.minutesBefore);
         if (!departure || !Number.isFinite(minutesBefore)) return null;
@@ -112,7 +123,14 @@
     function sync() {
         var list = load();
         var now = Date.now();
-        var keep = list.filter(function (r) { return r.triggerAt > now; });
+        // Lembretes antigos da Circular usavam previsões extrapoladas e não devem disparar.
+        var keep = list.filter(function (r) { return r.triggerAt > now && !isCircular(r.stopId); });
+        list.forEach(function (r) {
+            if (!keep.includes(r)) {
+                clearTimeout(timers[r.id]);
+                delete timers[r.id];
+            }
+        });
         if (keep.length !== list.length) save(keep);
         keep.forEach(schedule);
     }

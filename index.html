@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BarraBus - Transporte Público em Tempo Real</title>
+    <title>BarraBus - Pontos e horários de ônibus</title>
 
     <meta name="description" content="BarraBus — encontre pontos, linhas e horários de ônibus em Barra Bonita, SP. Veja o ponto mais próximo, próximas saídas, rotas e o mapa completo.">
     <meta name="author" content="BarraBus">
@@ -87,7 +87,7 @@
             <!-- Estimate Notice -->
             <div class="estimate-notice" role="note">
                 <i class="ti ti-info-circle"></i>
-                <span><strong>Previsões aproximadas.</strong> Sem rastreamento do ônibus em tempo real — o horário pode variar alguns minutos.</span>
+                <span>Horários aproximados. Chegue alguns minutos antes.</span>
             </div>
 
             <!-- Location Card -->
@@ -113,7 +113,7 @@
                 </div>
                 <div class="location-divider"></div>
                 <div class="location-embark">
-                    <span class="embark-label">PRÓXIMO EMBARQUE</span>
+                    <span class="embark-label">PRÓXIMO HORÁRIO</span>
                     <span class="embark-time" id="nextDepartureText">--</span>
                 </div>
             </div>
@@ -166,10 +166,12 @@
     <script defer src="js/theme.js"></script>
     <script defer src="js/favorites.js"></script>
     <script defer src="js/reminders.js"></script>
+    <script defer src="js/circular-route.js"></script>
     <script defer src="js/modal.js"></script>
     <script defer src="js/appShell.js"></script>
     <script defer src="js/bootstrap-home.js"></script>
     <script defer src="js/horarios.js"></script>
+    <script defer src="js/circular-ui.js"></script>
     <script defer src="script.js"></script>
 </body>
 </html>

@@ -2049,3 +2049,92 @@ select:focus-visible,
     0% { background-position: 100% 50%; }
     100% { background-position: 0 50%; }
 }
+
+
+/* Horários da Circular: relógio legível e um aviso por contexto. */
+.circular-notice { font-size: 12px; line-height: 1.5; color: var(--text-secondary); margin: 12px 0; }
+.estimate-notice { background: transparent; border: 0; padding: 6px 0; font-size: 12px; color: var(--text-secondary); }
+.stop-card .card-next-bus, .point-card[data-linha="circular"] .point-next-bus {
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; align-content: center; min-height: 76px;
+}
+.stop-card .card-next-label, .point-card[data-linha="circular"] .point-next-label {
+    white-space: normal; font-size: 10px; line-height: 1.4; letter-spacing: .025em;
+}
+.stop-card .card-next-time, .point-card[data-linha="circular"] .point-next-time {
+    white-space: normal; overflow-wrap: normal; word-break: normal; text-align: left;
+    font-size: 22px; line-height: 1.2; font-variant-numeric: tabular-nums;
+}
+.point-card[data-linha="circular"] .point-card-header { align-items: flex-start; }
+.point-card[data-linha="circular"] .point-card-title-row { min-width: 0; }
+.point-card[data-linha="circular"] .card-header-right { flex-shrink: 0; }
+.circular-times { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin: 14px 0; }
+.circular-time { padding: 12px; border: 1px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; gap: 5px; background: var(--bg-secondary); }
+.circular-time strong { color: var(--text-primary); font-size: 22px; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.2; }
+.circular-time-caption, .circular-time small { color: var(--text-secondary); font-size: 11px; line-height: 1.4; }
+.circular-time.is-next { border-color: var(--red); }
+.circular-time.is-next strong, .circular-time.is-next .circular-time-caption { color: var(--red); }
+.circular-general { display: flex; gap: 24px; flex-wrap: wrap; padding-top: 16px; font-size: 14px; line-height: 1.8; }
+.modal-overlay:not(.plena-theme) .next-bus-card { flex-wrap: wrap; gap: 12px; }
+.modal-overlay:not(.plena-theme) .next-bus-left { min-width: 0; max-width: 100%; }
+.modal-overlay:not(.plena-theme) .next-bus-time { white-space: normal; overflow-wrap: normal; line-height: 1.2; font-size: clamp(24px, 5vw, 36px); }
+.circular-route { padding-left: 28px; margin: 12px 0; line-height: 1.6; }
+.circular-route li { padding: 4px 0; }
+
+/* Home: rótulo e horário lado a lado, sem aumentar a altura do card. */
+.stop-card .card-next-bus { display:flex; flex-wrap:nowrap; align-items:center; justify-content:space-between; gap:8px; min-height:0; padding:9px 12px; }
+.stop-card .card-next-label { font-size:10px; white-space:nowrap; flex-shrink:0; }
+.stop-card .card-next-time { font-size:18px; text-align:right; max-width:50%; line-height:1.25; flex-shrink:0; }
+
+/* Navegação sempre acessível no topo do modal. */
+.route-explorer { width:100%; }
+.route-period { display:flex; gap:8px; margin-bottom:14px; }
+.route-period button { flex:1; }
+.route-explorer button, .route-explorer select { font:inherit; font-size:13px; color:var(--text-primary); }
+.route-period button, .route-navigation button, .route-return { min-height:44px; padding:10px 14px; border:1px solid var(--border-light); border-radius:10px; background:var(--bg-hover); cursor:pointer; }
+.route-period button[aria-pressed="true"] { background:var(--red); color:white; border-color:var(--red); font-weight:700; }
+.route-explorer button:hover:not(:disabled) { border-color:var(--red); }
+.route-explorer button:focus-visible, .route-explorer select:focus-visible, .modal-tab-btn:focus-visible { outline:3px solid var(--red); outline-offset:3px; }
+.route-field { display:block; font-size:12px; color:var(--text-secondary); margin:12px 0; }
+.route-field select { display:block; width:100%; min-width:0; min-height:44px; padding:8px 10px; margin-top:6px; border:1px solid var(--border-light); border-radius:8px; background:var(--bg-secondary); }
+.route-caption, .route-service-note { font-size:12px; line-height:1.5; color:var(--text-secondary); margin:10px 0; }
+.route-window { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); list-style:none; padding:0; margin:20px 0 16px; }
+.route-node { position:relative; text-align:center; min-width:0; padding:0 5px; }
+.route-node::before { content:''; position:absolute; top:14px; left:0; right:0; height:3px; background:var(--border-light); }
+.route-node:first-child::before { left:50%; }
+.route-node:last-child::before { right:50%; }
+.route-node-dot { display:grid; place-items:center; position:relative; margin:0 auto 8px; width:30px; height:30px; border-radius:50%; background:var(--bg-hover); border:2px solid var(--border-light); font-size:11px; color:var(--text-secondary); }
+.route-node.is-focused .route-node-dot { background:var(--red); border-color:var(--red); color:white; }
+.route-node button { display:block; width:100%; min-height:64px; padding:8px 5px; border:1px solid var(--border); border-radius:8px; background:var(--bg-secondary); line-height:1.4; cursor:pointer; overflow-wrap:break-word; }
+.route-node.is-focused button { border-color:var(--red); font-weight:700; }
+.route-node small { display:block; font-size:10px; line-height:1.4; margin-top:6px; color:var(--text-secondary); }
+.route-navigation { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.route-navigation button:disabled { opacity:.4; cursor:default; }
+.route-navigation span { font-size:12px; color:var(--text-secondary); text-align:center; }
+.route-return { display:block; width:100%; margin-top:10px; background:transparent; font-size:12px; }
+.route-return:disabled { opacity:.45; cursor:default; }
+@media(max-width:480px) {
+  .route-node button { font-size:11px; min-height:76px; }
+ .route-navigation button { font-size:12px; padding:8px 10px; }
+}
+
+/* Abas abaixo do mapa, no mesmo fluxo do conteúdo. */
+#modalTabsWrap > .modal-tab-bar { margin:0 0 16px; padding:0; }
+#modalTabsWrap > .modal-tab-bar .modal-tab-btn { min-height:44px; }
+.passed-details.schedule-history { border:0; padding:0; margin:16px 0 0; background:transparent; overflow:visible; }
+.passed-details.schedule-history > summary { display:flex; align-items:center; gap:10px; min-height:56px; padding:12px 14px; border:1px solid var(--border-light); border-radius:12px; background:var(--bg-hover); color:var(--text-primary); cursor:pointer; list-style:none; font-size:13px; font-weight:600; transition:background .15s,border-color .15s; }
+.schedule-history > summary::-webkit-details-marker { display:none; }
+.schedule-history > summary::marker { content:''; }
+.schedule-history > summary:hover { border-color:var(--red); }
+.schedule-history > summary:focus-visible { outline:3px solid var(--red); outline-offset:3px; }
+.history-icon { flex:0 0 22px; color:var(--text-secondary); }
+.history-title { flex:1; min-width:0; line-height:1.4; }
+.history-count { display:grid; place-items:center; min-width:28px; height:28px; padding:0 7px; border-radius:8px; background:var(--bg-secondary); color:var(--text-secondary); font-size:12px; font-variant-numeric:tabular-nums; }
+.history-action { display:flex; align-items:center; gap:10px; color:var(--text-secondary); font-size:12px; }
+.history-chevron { display:block; width:8px; height:8px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(45deg); margin:-4px 2px 0; transition:transform .15s; }
+.history-hide { display:none; }
+.schedule-history[open] .history-hide { display:inline; }
+.schedule-history[open] .history-show { display:none; }
+.schedule-history[open] .history-chevron { transform:rotate(225deg); margin:4px 2px 0; }
+.schedule-history[open] > summary { border-color:var(--red); }
+.schedule-history > .circular-times { margin:10px 0 0; }
+@media(max-width:400px) { .schedule-history > summary { gap:8px; padding:12px; } .history-show,.schedule-history[open] .history-hide { display:none; } }

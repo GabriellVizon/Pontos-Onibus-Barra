@@ -418,7 +418,6 @@ function renderNearbyStops() {
 
 function renderStopCard(ponto) {
   const pass = encontrarPassagens(ponto.id);
-  const horariosLinha = obterHorariosDoPonto(ponto.id);
   const distanceText = typeof ponto.distancia === 'number'
     ? formatDistance(ponto.distancia)
     : hasCoords(ponto)
@@ -434,17 +433,11 @@ function renderStopCard(ponto) {
     ? (pass.situacao === 'no_ponto' ? 'now' : 'waiting')
     : 'waiting';
   const nextTimeText = pass.encontrado
-    ? pass.horario
+    ? pass.label
     : (pass.mensagem || 'Sem horário');
-  const rangeChip = pass.encontrado && pass.faixa
-    ? `<span class="meta-chip range-chip" title="Janela de previsão (±3 min)">≈ ${escapeHtml(pass.faixa.label)}</span>`
-    : '';
-
-  const agoraHoje = timeToMinutes(new Date());
-  const chipsProximos = horariosLinha.filter((horario) => {
-    const m = timeToMinutes(horario);
-    return m !== null && m >= agoraHoje;
-  });
+  const agora = new Date();
+  const agoraHoje = agora.getHours() * 60 + agora.getMinutes();
+  const chipsProximos = calcularPassagensDoPonto(ponto.id).filter(p => p.embarque && p.minutosFim >= agoraHoje);
   const chipsVisiveis = chipsProximos.slice(0, 4);
   const chipsExtras = Math.max(0, chipsProximos.length - 4);
 
@@ -469,12 +462,11 @@ function renderStopCard(ponto) {
       </div>
       <div class="card-meta">
         <span class="meta-chip">${escapeHtml(ponto.bairro)}</span>
-        ${rangeChip}
       </div>
       <div class="card-horarios">
         ${chipsVisiveis
-          .map((horario) => `
-            <span class="time-chip ${pass.encontrado && horario === pass.horario ? 'active' : 'inactive'}">${escapeHtml(horario)}</span>
+          .map((p) => `
+            <span class="time-chip ${pass.encontrado && p.horario === pass.horario ? 'active' : 'inactive'}" title="${escapeAttr(origemPassagemCircular(p))}">${escapeHtml(rotuloPassagemCircular(p))}</span>
           `)
           .join('')}
         ${chipsExtras > 0 ? `<span class="time-chip more-chip">+${chipsExtras}</span>` : ''}
@@ -670,7 +662,7 @@ function updateLocationSummary() {
   }
 
   const pass = encontrarPassagens(nearest.id);
-  const nextTime = pass.encontrado ? pass.horario : (pass.mensagem ? pass.mensagem : '--');
+  const nextTime = pass.encontrado ? pass.label : (pass.mensagem ? pass.mensagem : '--');
   setLocationStatus(
     'Localização detectada',
     `${nearest.nome} (${formatDistance(nearest.distancia)})`,
@@ -688,7 +680,7 @@ function openStopModal(stopId) {
 
   const pass = encontrarPassagens(ponto.id);
   const next = pass.encontrado
-    ? { time: pass.horario, label: pass.label, minutes: pass.minutos, faixa: pass.faixa, situacao: pass.situacao }
+    ? { time: pass.horario, label: pass.label, minutes: pass.minutos, faixa: pass.faixa, situacao: pass.situacao, aviso: pass.aviso, tipo: pass.tipo }
     : { time: '--', label: pass.mensagem || 'Sem horário', minutes: Number.POSITIVE_INFINITY, faixa: null, situacao: pass.situacao };
   const horarios = obterHorariosDoPonto(ponto.id);
   const isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
@@ -735,8 +727,8 @@ function selectStop(stopId, options = {}) {
   if (els.selectedStopName) els.selectedStopName.textContent = ponto.nome;
   if (els.selectedStopDetails) {
     const nextText = next.encontrado
-      ? `próxima passagem ${next.horario}`
-      : (next.mensagem || 'sem ônibus hoje');
+      ? `previsão ${next.label}`
+      : (next.mensagem || 'sem referência disponível');
     els.selectedStopDetails.textContent = hasCoords(ponto)
       ? `${ponto.endereco} - ${nextText}`
       : `${ponto.endereco} - este ponto ainda não tem latitude e longitude.`;
@@ -759,6 +751,7 @@ function setLocationStatus(location, nearest, departure) {
 }
 
 function refreshLiveDepartures() {
+  updateLocationSummary();
   if (typeof encontrarPassagens !== 'function') return;
 
   document.querySelectorAll('.stop-card').forEach((card) => {
@@ -771,7 +764,7 @@ function refreshLiveDepartures() {
       if (!pass.encontrado) {
         timeEl.textContent = pass.mensagem || 'Sem horário';
       } else {
-        timeEl.textContent = pass.horario;
+        timeEl.textContent = pass.label;
         timeEl.classList.add(pass.situacao === 'no_ponto' ? 'now' : 'waiting');
         timeEl.title = pass.faixa ? 'Previsto entre ' + pass.faixa.label : '';
       }
@@ -782,9 +775,16 @@ function refreshLiveDepartures() {
       rangeEl.textContent = pass.encontrado && pass.faixa ? '≈ ' + pass.faixa.label : '';
     }
 
+    const chipsWrap = card.querySelector('.card-horarios');
+    if (chipsWrap) {
+      const now = new Date();
+      const minuto = now.getHours() * 60 + now.getMinutes();
+      chipsWrap.innerHTML = calcularPassagensDoPonto(stopId).filter(p => p.embarque && p.minutosFim >= minuto).slice(0,4)
+        .map(p => '<span class="time-chip">' + escapeHtml(rotuloPassagemCircular(p)) + '</span>').join('');
+    }
     const chips = card.querySelectorAll('.card-horarios .time-chip');
     chips.forEach((chip) => {
-      const isActive = pass.encontrado && chip.textContent.trim() === pass.horario;
+      const isActive = pass.encontrado && chip.textContent.trim() === pass.label;
       chip.classList.toggle('active', isActive);
       chip.classList.toggle('inactive', !isActive);
     });
@@ -797,13 +797,11 @@ function refreshLiveDepartures() {
 
     if (ponto && hasCoords(ponto)) {
       const pass = encontrarPassagens(state.selectedStopId);
-      const faixaText = pass.encontrado && pass.faixa ? ` (previsto ${pass.faixa.label})` : '';
 
       els.selectedStopDetails.textContent =
         pass.encontrado
-          ? `${ponto.endereco} - próxima passagem ${pass.horario}${faixaText}`
-          : `${ponto.endereco} - ${pass.mensagem || 'sem ônibus hoje.'}`;
+          ? `${ponto.endereco} - previsão ${pass.label}`
+          : `${ponto.endereco} - ${pass.mensagem || 'sem referência disponível'}`;
     }
   }
 }
-

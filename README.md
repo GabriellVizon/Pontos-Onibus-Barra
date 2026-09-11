@@ -1,6 +1,12 @@
+> Versão atual: **v4**. Veja [as duas alterações de interface](INTERFACE-V4.md).
+
 # BarraBus
 
+**Interface v3:** [Página inicial e percurso corrigidos](INTERFACE-V3.md).
+
 Pontos de ônibus e horários de Barra Bonita (SP). Site estático em HTML/CSS/JS puro (PWA, funciona offline).
+
+**Circular v2: horários estimados para todos os pontos, calculados por médias de cada período.** Leia [AJUSTES-CIRCULAR.md](AJUSTES-CIRCULAR.md) para conhecer os relatos incorporados, o cálculo, as limitações e como revisar esta versão. Não há rastreamento do ônibus.
 
 ## Como rodar
 
@@ -45,7 +51,7 @@ manifest.json   → Manifest do PWA
 ## Scripts
 
 ```bash
-npm test     # roda os testes unitários das funções de js/utils.js (node:test)
+npm test     # roda os testes de horários, referências, lembretes e utilitários (node:test)
 npm run lint # roda o ESLint em todo o JS
 ```
 
@@ -55,4 +61,4 @@ npm run lint # roda o ESLint em todo o JS
 - Ao mudar assets/arquivos que devem ficar offline, atualize `PRE_CACHE_URLS` no `sw.js` e aumente `CACHE_NAME`.
 - Troca de tema: as cores vêm de variáveis CSS em `css/shared.css` (`[data-theme="light"]` redefine as variáveis). Evite cores fixas (`#fff`/`#000`) nos componentes; prefira `var(--text-primary)`.
 - Próximas saídas: os cards, o modal e o resumo da home se atualizam a cada 30s (`refreshLiveDepartures` / `updateLive`).
-- Lembretes: agendados por `js/reminders.js` via `Notification`. Disparam **somente com o app/aba aberto** (sem servidor de push); com permissão negada, cai em um toast interno.
+- Lembretes: indisponíveis para a Circular nesta versão; a reativação do agendamento está fora desta correção. Para a Plena, seguem agendados por `js/reminders.js` via `Notification`. Disparam **somente com o app/aba aberto** (sem servidor de push); com permissão negada, cai em um toast interno.

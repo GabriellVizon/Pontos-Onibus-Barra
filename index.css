@@ -64,6 +64,7 @@
 /* ========== LOCATION CARD ========== */
 .estimate-notice {
     margin: 14px 24px 28px;
+    font-size: 15px;
 }
 
 .location-card {
@@ -383,6 +384,7 @@
     }
     .estimate-notice {
         margin: 14px 12px 24px;
+        font-size: 14px;
     }
     .location-embark {
         align-items: center;
@@ -413,6 +415,7 @@
     }
     .estimate-notice {
         margin: 14px 8px 24px;
+        font-size: 14px;
     }
     .section {
         padding: 0 8px;

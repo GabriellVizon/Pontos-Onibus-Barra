@@ -22,7 +22,7 @@
         distanceCachePlena: null,
         scheduleLinha: 'circular',
         scheduleSentidoPlena: null,
-        scheduleDiaTab: 'uteis',
+        scheduleDiaTab: getCurrentDayType(),
         linhasDoPonto: []
     };
 
@@ -621,17 +621,6 @@
         var isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
         var distancia = getDistanceText(ponto, linha);
         var dotColor = linha === 'plena' ? '#2196f3' : BUS_COLOR;
-        var faixaChip = '';
-        if (linha === 'circular') {
-            var circInfo = typeof apresentarProximaCircular === 'function'
-                ? apresentarProximaCircular(ponto.id)
-                : { encontrado: false };
-            if (circInfo.encontrado && circInfo.faixa) {
-                faixaChip = '<span class="point-chip range-chip" title="Janela de previsão (±3 min)">≈ ' +
-                    escapeHtml(circInfo.faixa.label) + '</span>';
-            }
-        }
-
         var linhaTag = linha === 'plena'
             ? '<span class="point-line-tag plena">PLENA</span>'
             : '';
@@ -652,12 +641,11 @@
             '</div>',
             '<p class="point-address">' + escapeHtml(ponto.endereco) + '</p>',
             '<div class="point-next-bus" style="border-left:3px solid ' + dotColor + '">',
-            '<span class="point-next-label"><i class="ti ti-bus" style="color:' + dotColor + '"></i> Próximo ônibus</span>',
+            '<span class="point-next-label"><i class="ti ti-bus" style="color:' + dotColor + '"></i> ' + (linha === 'circular' ? 'Próximo horário' : 'Próximo ônibus') + '</span>',
             '<span class="point-next-time ' + nextClass + '">' + escapeHtml(next.label) + '</span>',
             '</div>',
             '<div class="point-meta">',
             '<span class="point-chip">' + escapeHtml(ponto.bairro || '—') + '</span>',
-            faixaChip,
             '</div>',
             '</div>'
         ].join('');
@@ -723,8 +711,7 @@
                     time: passC.horario,
                     label: passC.label,
                     minutes: passC.minutosRestantes,
-                    faixa: passC.faixa,
-                    situacao: passC.situacao
+                    faixa: passC.faixa, aviso: passC.aviso, tipo: passC.tipo, situacao: passC.situacao
                 };
             } else {
                 next = { time: '--', label: passC.mensagem || 'Sem horário', minutes: Infinity, faixa: null };
@@ -791,7 +778,7 @@
 
         state.linhasDoPonto = linhas;
         state.scheduleLinha = linhas.length === 1 ? linhas[0] : 'circular';
-        state.scheduleDiaTab = 'uteis';
+        state.scheduleDiaTab = getCurrentDayType();
 
         if (state.scheduleLinha === 'plena') {
             var sentidos = typeof obterSentidosPlena === 'function' ? obterSentidosPlena(ponto.id) : [];
@@ -818,7 +805,7 @@
         if (state.selectedPointId == null) return;
         state.selectedPointId = null;
         state.scheduleLinha = 'circular';
-        state.scheduleDiaTab = 'uteis';
+        state.scheduleDiaTab = getCurrentDayType();
         state.scheduleSentidoPlena = null;
         if (els.selectedPointName) els.selectedPointName.textContent = 'Nenhum ponto selecionado';
         if (els.selectedDistance) els.selectedDistance.textContent = 'Aguardando localização';
@@ -1113,6 +1100,10 @@
             }
             return { time: '--', label: 'Sem horário', minutes: Infinity };
         }
+        // A tabela e o resumo usam a mesma seleção de dia. Em outro dia, não há contagem relativa a agora.
+        if (state.scheduleLinha === 'circular' && state.scheduleDiaTab !== getCurrentDayType()) {
+            return { time: '--', label: state.scheduleDiaTab === 'domingo' ? 'Não opera aos domingos' : 'Consultando outro dia', minutes: Infinity };
+        }
         // CIRCULAR
         if (state.selectedPointId && typeof encontrarPassagens === 'function') {
             var passC = encontrarPassagens(state.selectedPointId, null, state.scheduleDiaTab);
@@ -1121,32 +1112,14 @@
             }
             return { time: '--', label: passC.mensagem || 'Sem horário', minutes: Infinity };
         }
-        // Sem ponto selecionado: mostra apenas as saídas do terminal para o dia.
-        var saidasDia = typeof obterSaidasDoDiaCircular === 'function'
-            ? obterSaidasDoDiaCircular(state.scheduleDiaTab)
-            : [];
-        if (saidasDia.length > 0) {
-            var agoraC = new Date();
-            var agoraMinC = agoraC.getHours() * 60 + agoraC.getMinutes();
-            var proximoSC = null;
-            for (var sc = 0; sc < saidasDia.length; sc++) {
-                if (horarioParaMinutos(saidasDia[sc]) >= agoraMinC) { proximoSC = saidasDia[sc]; break; }
-            }
-            if (proximoSC) {
-                var diffC = horarioParaMinutos(proximoSC) - agoraMinC;
-                return {
-                    time: proximoSC,
-                    label: diffC <= 1 ? 'Agora' : (diffC < 60 ? diffC + ' min' : Math.floor(diffC / 60) + 'h'),
-                    minutes: diffC
-                };
-            }
-            return { time: '--', label: 'Encerrado', minutes: Infinity };
-        }
-        return { time: '--', label: 'Não opera neste dia', minutes: Infinity };
+        return { time: '--', label: 'Selecione um ponto', minutes: Infinity };
+
     }
 
     function renderScheduleCard() {
         var next = computeNextForSchedule();
+        var heading = document.getElementById('selectedNextHeading');
+        if (heading) heading.textContent = state.scheduleLinha === 'circular' ? 'PRÓXIMO HORÁRIO' : 'PRÓXIMO ÔNIBUS';
         var scheduleDetailCard = document.querySelector('.line-detail-card');
         if (scheduleDetailCard) scheduleDetailCard.classList.toggle('is-plena', state.scheduleLinha === 'plena');
 
@@ -1159,6 +1132,10 @@
         renderDirectionSelector();
         renderScheduleTable();
 
+        if (state.scheduleLinha === 'circular') {
+            if (els.scheduleNote) els.scheduleNote.textContent = '';
+            return;
+        }
         if (els.scheduleNote) {
             if (state.selectedPointId && next.time && next.time !== '--') {
                 els.scheduleNote.textContent = 'Horário destacado indica a próxima saída.';
@@ -1208,7 +1185,7 @@
                     state.scheduleSentidoPlena = null;
                 }
 
-                state.scheduleDiaTab = 'uteis';
+                state.scheduleDiaTab = getCurrentDayType();
                 renderScheduleCard();
             });
         });
@@ -1247,7 +1224,7 @@
         btnsContainer.querySelectorAll('.schedule-sel-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 state.scheduleSentidoPlena = this.getAttribute('data-sentido');
-                state.scheduleDiaTab = 'uteis';
+                state.scheduleDiaTab = getCurrentDayType();
                 renderScheduleCard();
             });
         });
@@ -1256,6 +1233,19 @@
     function renderScheduleTable() {
         var container = els.scheduleDynamicContent;
         if (!container) return;
+        if (state.scheduleLinha === 'circular') {
+            var previousDetails = container.querySelector('details');
+            var wasOpen = previousDetails && previousDetails.open;
+            var htmlCircular = '<div class="schedule-day-tabs">' + diasComHorariosCircular().map(function (d) {
+                return '<button type="button" class="schedule-day-tab' + (d.id === state.scheduleDiaTab ? ' active' : '') + '" aria-pressed="' + (d.id === state.scheduleDiaTab) + '" data-dia="' + d.id + '">' + escapeHtml(d.nome) + '</button>';
+            }).join('') + '</div><div class="circular-schedule-body">' + CircularUI.schedule(state.selectedPointId, state.scheduleDiaTab, state.scheduleExpanded) + '</div>';
+            container.innerHTML = htmlCircular;
+            var details = container.querySelector('details'); if (details && wasOpen) details.open = true;
+            container.querySelectorAll('[data-dia]').forEach(function (btn) { btn.addEventListener('click', function () { state.scheduleDiaTab = btn.dataset.dia; state.scheduleExpanded = false; renderScheduleCard(); }); });
+            var expand = container.querySelector('#scheduleFutureToggle');
+            if (expand) expand.addEventListener('click', function () { state.scheduleExpanded = !state.scheduleExpanded; renderScheduleTable(); });
+            return;
+        }
         var html = '', abas = [], horarios = [];
         if (state.scheduleLinha === 'plena' && state.scheduleSentidoPlena) {
             if (state.selectedPointId && typeof obterAbasDiaPlena === 'function') abas = obterAbasDiaPlena(state.scheduleSentidoPlena,state.selectedPointId);
@@ -1358,6 +1348,16 @@
     function refreshLiveDepartures() {
         if (typeof CONFIG_HORARIOS === 'undefined' && state.scheduleLinha !== 'plena') return;
 
+        if (state.scheduleLinha === 'circular') {
+            var body = els.scheduleDynamicContent && els.scheduleDynamicContent.querySelector('.circular-schedule-body');
+            if (body) {
+                var oldDetails = body.querySelector('details'), opened = oldDetails && oldDetails.open;
+                body.innerHTML = CircularUI.schedule(state.selectedPointId, state.scheduleDiaTab, state.scheduleExpanded);
+                var newDetails = body.querySelector('details'); if (newDetails && opened) newDetails.open = true;
+                var expand = body.querySelector('#scheduleFutureToggle');
+                if (expand) expand.addEventListener('click', function () { state.scheduleExpanded = !state.scheduleExpanded; renderScheduleTable(); });
+            }
+        }
         if (state.selectedPointId != null) {
             var ponto = state.pontos.find(function (p) { return p.id === state.selectedPointId; })
                 || state.pontosPlena.find(function (p) { return p.id === state.selectedPointId; });

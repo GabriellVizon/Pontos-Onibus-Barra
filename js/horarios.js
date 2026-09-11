@@ -1,459 +1,208 @@
-// ========================================
-// CONFIGURAÇÃO CIRCULAR
-// ========================================
-
+// Circular: referências de operação e observações aproximadas do passageiro.
+// As referências A não significam novas saídas da garagem a cada hora.
 const CONFIG_HORARIOS = {
-    // Tempo padrão por trecho (min) usado somente onde não há coordenadas para
-    // estimar por distância. A calibração (abaixo) tem prioridade.
-    baseTempoPorPonto: 2.5,
-
-    // Janela de incerteza (± minutos). Sem rastreador no ônibus, a passagem real
-    // pode acontecer antes (atraso) ou depois (adiantado) do previsto. O app jamais
-    // afirma "passou/chegando" fora dessa janela:
-    //   - estado "No ponto"  -> agora dentro de [previsto - antes, previsto + depois]
-    //   - estado "Aguardando" -> falta mais de `depois` minutos para o previsto
-    incerteza: { antes: 3, depois: 3 },
-
-    // ========================================
-    // CALIBRAÇÃO (tempos de viagem REAIS observados)
-    // ========================================
-    // Chave: "<ROTA>_<idDoPonto>"   Valor: minutos ENTRE a saída e a passagem real.
-    // Como não há GPS no ônibus, baseie-se em observação: anote o horário que o bus
-    // passa de verdade no ponto para uma saída conhecida e acrescente uma âncora aqui.
-    // Ex.: saída B das 17:15 — Igreja(36) passa 17:40 (25 min), Orestes(37) 17:43
-    // (28 min), Papa João(38) 17:46 (31 min). Os trechos entre âncoras (e antes da
-    // primeira) são divididos proporcionalmente pela distância geográfica entre as
-    // paradas, então quanto mais âncoras você cadastrar, mais preciso fica.
-    calibracao: {
-        "B_36": 25,    // Igreja        (real 17:40)
-        "B_37": 28,    // Rua Orestes   (real 17:43)
-        "B_38": 31     // Papa João     (real 17:46)
-    },
-
     rotas: {
         A: {
-            nome: "Rota A",
-            // Horários de saída por tipo de dia. No domingo não há operação.
-            saidas: {
-                uteis: ["06:15", "07:15", "08:15"],
-                sabado: ["06:15", "07:15", "08:15"],
-                domingo: []
-            },
-            // A primeira saída do dia começa fora do terminal (rota especial).
+            nome: 'Manhã',
+            saidas: { uteis: ['06:15', '07:15', '08:15'], sabado: ['06:15', '07:15', '08:15'], domingo: [] },
             inicioEspecial: [13, 12],
-            circuito: [
-                33, 34, 35, 36, 37, 38, 39, 40,
-                41, 42, 43, 44, 45, 46, 47, 48,
-                49, 50, 51, 52,
-                16, 17, 18, 14, 19, 20, 21, 22,
-                23, 24, 10, 25, 26, 27, 28,
-                5, 29, 1, 4, 5, 6, 7, 8, 9,
-                53, 54, 55
-            ]
+            circuito: [33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,16,17,18,14,19,20,21,22,23,24,10,25,26,27,28,5,29,1,4,5,6,7,8,9,53,54,55]
         },
         B: {
-            nome: "Rota B",
-            saidas: {
-                uteis: ["12:00", "13:15", "15:15", "17:15", "18:15"],
-                sabado: ["15:15", "17:15"],
-                domingo: []
-            },
-            circuito: [
-                1, 4, 5, 6, 7, 8, 9,
-                53, 54, 55,
-                33, 34, 35, 36, 37, 38, 39, 40,
-                41, 42, 43, 44, 45, 46, 47, 48,
-                49, 50, 51, 52,
-                16, 17, 18, 14, 19, 20, 21, 22,
-                23, 24, 10, 25, 26, 27, 28,
-                5, 29, 1
-            ]
+            nome: 'Tarde',
+            saidas: { uteis: ['12:00', '13:15', '15:15', '17:15', '18:15'], sabado: ['15:15', '17:15'], domingo: [] },
+            circuito: [1,4,5,6,7,8,9,53,54,55,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,16,17,18,14,19,20,21,22,23,24,10,25,26,27,28,5,29,1]
         }
+    },
+    // Correspondências informadas pelo proprietário; 11 → 10 é provisória.
+    correspondencias: { 11: 10, 15: 45 },
+    // Minutos relativos à referência da viagem. Ocorrências repetidas são distintas.
+    // Sem datas/amostra suficientes para calcular um intervalo estatístico de confiança.
+    observacoes: {
+        'A_06:15': [{ pontoId: 16, ocorrencia: 1, de: 15, ate: 15 }],
+        'A_07:15': [{ pontoId: 16, ocorrencia: 1, de: 15, ate: 15 }],
+        'A_08:15': [{ pontoId: 16, ocorrencia: 1, de: 15, ate: 15 }, { pontoId: 29, ocorrencia: 1, de: 45, ate: 45 }],
+        'B_15:15': [{ pontoId: 5, ocorrencia: 1, de: 5, ate: 5 }],
+        'B_17:15': [
+            { pontoId: 5, ocorrencia: 1, de: 5, ate: 5 },
+            { pontoId: 36, ocorrencia: 1, de: 25, ate: 25 },
+            { pontoId: 37, ocorrencia: 1, de: 28, ate: 28 },
+            { pontoId: 38, ocorrencia: 1, de: 31, ate: 31 },
+            { pontoId: 16, ocorrencia: 1, de: 45, ate: 51 }
+        ]
     }
 };
 
-
-// ========================================
-// CONFIGURAÇÃO PLENA (carregada do JSON)
-// ========================================
-
 var CONFIG_PLENA = null;
-
-function carregarConfigPlena(horariosPlena) {
-    CONFIG_PLENA = horariosPlena;
-}
-
-
-// ========================================
-// PONTOS DA CIRCULAR (para cálculos por distância)
-// ========================================
-
+function carregarConfigPlena(dados) { CONFIG_PLENA = dados; }
 var PONTOS_CIRCULAR = [];
-var TEMPOS_CACHE = {};
-
-function setPontosCircular(pontos) {
-    PONTOS_CIRCULAR = Array.isArray(pontos) ? pontos : [];
-    TEMPOS_CACHE = {};
+function setPontosCircular(pontos) { PONTOS_CIRCULAR = Array.isArray(pontos) ? pontos : []; VIAGENS_CIRCULAR = {}; }
+function getPontoCircular(id) { return PONTOS_CIRCULAR.find(function (p) { return String(p.id) === String(id); }) || null; }
+function horarioParaMinutos(h) { var p = h.split(':').map(Number); return p[0] * 60 + p[1]; }
+function minutosParaHorario(m) {
+    var total = ((Math.round(m) % 1440) + 1440) % 1440;
+    return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
 }
-
-function getPontoCircular(pontoId) {
-    for (var i = 0; i < PONTOS_CIRCULAR.length; i++) {
-        if (String(PONTOS_CIRCULAR[i].id) === String(pontoId)) return PONTOS_CIRCULAR[i];
-    }
-    return null;
+function diaCircular(agora) {
+    var dia = (agora || new Date()).getDay();
+    return dia === 0 ? 'domingo' : dia === 6 ? 'sabado' : 'uteis';
 }
-
-function distanciaEntrePontos(p1, p2) {
-    if (!p1 || !p2) return null;
-    if (!hasCoords(p1) || !hasCoords(p2)) return null;
-    var d = distanceKm(Number(p1.lat), Number(p1.lng), Number(p2.lat), Number(p2.lng));
-    return Number.isFinite(d) && d > 0 ? d : null;
+function obterSaidasDoDia(rota, dia) { return (rota && rota.saidas[dia || diaCircular()]) || []; }
+function obterSaidasDoDiaCircular(dia) {
+    var lista = [];
+    Object.values(CONFIG_HORARIOS.rotas).forEach(function (r) { lista = lista.concat(obterSaidasDoDia(r, dia)); });
+    return Array.from(new Set(lista)).sort();
 }
-
-
-// ========================================
-// CONVERSÃO DE HORÁRIOS
-// ========================================
-
-function horarioParaMinutos(horario) {
-    const [horas, minutos] = horario.split(":").map(Number);
-    return horas * 60 + minutos;
-}
-
-function minutosParaHorario(minutos) {
-    const total = Math.round(minutos);
-    const horas = Math.floor(total / 60) % 24;
-    const mins = total % 60;
-    return `${String(horas).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
-}
-
-
-// ========================================
-// JANELA DE INCERTEZA
-// ========================================
-
-function janelaPassagem() {
-    var inc = CONFIG_HORARIOS.incerteza || {};
-    return {
-        antes: Math.max(0, Number(inc.antes) || 3),
-        depois: Math.max(0, Number(inc.depois) || 3)
-    };
-}
-
-
-// ========================================
-// CIRCULAR: TEMPOS POR TRECHO
-// ========================================
-// Constrói o tempo de percurso entre cada parada consecutiva da sequência.
-// Trechos conhecidos (âncoras calibradas) são respeitados; os demais são
-// rateados proporcionalmente à distância geográfica entre as paradas.
-
-function _buildTempos(rotaCodigo, sequencia) {
-    var base = Number(CONFIG_HORARIOS.baseTempoPorPonto) > 0
-        ? Number(CONFIG_HORARIOS.baseTempoPorPonto)
-        : 2.5;
-    var calibracao = CONFIG_HORARIOS.calibracao || {};
-    var n = sequencia.length;
-    var tempos = new Array(n);
-    var gdist = new Array(n);
-    var i;
-
-    tempos[0] = 0;
-    gdist[0] = 0;
-    for (i = 1; i < n; i++) {
-        var d = distanciaEntrePontos(getPontoCircular(sequencia[i - 1]), getPontoCircular(sequencia[i]));
-        gdist[i] = d;
-        tempos[i] = (d == null) ? base : null;
-    }
-
-    // Âncoras calibradas (primeira ocorrência de cada ponto).
-    var anchors = [];
-    var vistos = {};
-    for (i = 0; i < n; i++) {
-        var chave = rotaCodigo + '_' + String(sequencia[i]);
-        if (vistos[chave]) continue;
-        vistos[chave] = true;
-        var alvo = Number(calibracao[chave]);
-        if (Number.isFinite(alvo) && alvo > 0) anchors.push({ index: i, minutes: alvo });
-    }
-
-    function somarDist(i0, i1) {
-        var acc = 0;
-        for (var j = i0 + 1; j <= i1; j++) {
-            if (gdist[j] != null) acc += gdist[j];
-        }
-        return acc;
-    }
-
-    // Rateia `delta` minutos entre os trechos i0+1..i1, proporcional à distância.
-    function preencher(i0, i1, delta) {
-        var totalDist = somarDist(i0, i1);
-        var fixo = 0;
-        for (var j = i0 + 1; j <= i1; j++) {
-            if (gdist[j] == null) fixo += tempos[j];
-        }
-        var restante = Math.max(0, delta - fixo);
-        var pace = totalDist > 0 ? restante / totalDist : null;
-        for (var k = i0 + 1; k <= i1; k++) {
-            if (gdist[k] == null) continue;
-            tempos[k] = (pace != null && gdist[k] > 0) ? gdist[k] * pace : base;
-        }
-        return pace;
-    }
-
-    // Início -> 1ª âncora -> ... -> última âncora.
-    var pontos = [{ index: 0, minutes: 0 }].concat(anchors);
-    var paceAnterior = null;
-    for (i = 0; i < pontos.length - 1; i++) {
-        paceAnterior = preencher(pontos[i].index, pontos[i + 1].index, pontos[i + 1].minutes - pontos[i].minutes);
-    }
-
-    // Cauda (após a última âncora): extrapola com o ritmo "min/km" da última partição.
-    if (anchors.length > 0) {
-        var ultimo = anchors[anchors.length - 1];
-        var deltaCauda = (paceAnterior != null) ? paceAnterior * somarDist(ultimo.index, n - 1) : null;
-        if (deltaCauda == null || deltaCauda <= 0) {
-            for (var t = ultimo.index + 1; t < n; t++) {
-                if (gdist[t] != null) tempos[t] = base;
-            }
-        } else {
-            preencher(ultimo.index, n - 1, deltaCauda);
-        }
-    } else {
-        for (var s = 1; s < n; s++) {
-            if (gdist[s] != null) tempos[s] = base;
-        }
-    }
-
-    // Sanitização: garante trechos finitos e com mínimo de 0,5 min.
-    for (i = 1; i < n; i++) {
-        if (!Number.isFinite(tempos[i]) || tempos[i] <= 0) tempos[i] = base;
-        if (tempos[i] < 0.5) tempos[i] = 0.5;
-    }
-
-    // Garante que a passagem nas âncoras seja EXATAMENTE a calibrada.
-    var mapaAncora = {};
-    anchors.forEach(function (a) { mapaAncora[a.index] = a.minutes; });
-    var acumulado = 0;
-    for (i = 0; i < n; i++) {
-        acumulado += (i === 0) ? 0 : tempos[i];
-        if (mapaAncora[i] !== undefined) {
-            tempos[i] += mapaAncora[i] - acumulado;
-            acumulado = mapaAncora[i];
-        }
-    }
-
-    // Acumulado por parada (minutos após a saída).
-    var cum = new Array(n);
-    cum[0] = 0;
-    for (i = 1; i < n; i++) cum[i] = cum[i - 1] + tempos[i];
-
-    return { sequencia: sequencia, tempos: tempos, cum: cum };
-}
-
-function obterTemposRota(rotaCodigo, comEspecial) {
-    var rota = CONFIG_HORARIOS.rotas[rotaCodigo];
-    if (!rota) return null;
-    var chave = rotaCodigo + ':' + (comEspecial ? 'E' : 'N');
-    if (TEMPOS_CACHE[chave]) return TEMPOS_CACHE[chave];
-    var sequencia = (comEspecial && Array.isArray(rota.inicioEspecial))
-        ? rota.inicioEspecial.concat(rota.circuito)
-        : rota.circuito;
-    var build = _buildTempos(rotaCodigo, sequencia);
-    TEMPOS_CACHE[chave] = build;
-    return build;
-}
-
-
-// ========================================
-// CIRCULAR: SAÍDAS POR DIA
-// ========================================
-
-function obterSaidasDoDia(rota, diaTipo) {
-    diaTipo = diaTipo || getCurrentDayType();
-    var mapa = rota && rota.saidas;
-    var lista = mapa && Array.isArray(mapa[diaTipo]) ? mapa[diaTipo] : [];
-    return lista;
-}
-
-function obterSaidasDoDiaCircular(diaTipo) {
-    diaTipo = diaTipo || getCurrentDayType();
-    var saidas = [];
-    Object.keys(CONFIG_HORARIOS.rotas).forEach(function (codigo) {
-        obterSaidasDoDia(CONFIG_HORARIOS.rotas[codigo], diaTipo).forEach(function (h) {
-            if (saidas.indexOf(h) === -1) saidas.push(h);
-        });
-    });
-    saidas.sort(function (a, b) { return horarioParaMinutos(a) - horarioParaMinutos(b); });
-    return saidas;
-}
-
 function diasComHorariosCircular() {
-    var out = [];
-    ['uteis', 'sabado', 'domingo'].forEach(function (dia) {
-        if (obterSaidasDoDiaCircular(dia).length > 0) {
-            out.push({ id: dia, nome: dia === 'uteis' ? 'Dias Úteis' : dia === 'sabado' ? 'Sábado' : 'Domingo' });
-        }
-    });
-    return out;
+    return [{ id: 'uteis', nome: 'Dias úteis' }, { id: 'sabado', nome: 'Sábado' }, { id: 'domingo', nome: 'Domingo · não opera' }];
 }
-
-
-// ========================================
-// CIRCULAR: PASSAGENS DE UM PONTO
-// ========================================
-
-function calcularPassagensDoPonto(pontoId, diaTipo) {
-    diaTipo = diaTipo || getCurrentDayType();
-    var passagens = [];
-
-    Object.keys(CONFIG_HORARIOS.rotas).forEach(function (codigo) {
-        var rota = CONFIG_HORARIOS.rotas[codigo];
-        var saidas = obterSaidasDoDia(rota, diaTipo);
-        saidas.forEach(function (saida, idx) {
-            var comEspecial = !!(rota.inicioEspecial && idx === 0);
-            var build = obterTemposRota(codigo, comEspecial);
-            if (!build) return;
-            var saidaMin = horarioParaMinutos(saida);
-            for (var p = 0; p < build.sequencia.length; p++) {
-                if (String(build.sequencia[p]) !== String(pontoId)) continue;
-                var total = saidaMin + build.cum[p];
-                passagens.push({
-                    linha: 'circular',
-                    nomeLinha: 'Rota Circular',
-                    rota: codigo,
-                    nomeRota: rota.nome,
-                    saida: saida,
-                    pontoId: pontoId,
-                    posicao: p,
-                    horario: minutosParaHorario(total),
-                    minutos: Math.round(total)
-                });
-            }
+function sequenciaViagemCircular(codigo, referencia) {
+    var rota = CONFIG_HORARIOS.rotas[codigo];
+    if (!rota) return [];
+    var seq = rota.circuito.slice();
+    if (codigo === 'A' && referencia === '06:15') seq = rota.inicioEspecial.concat(seq);
+    // A última viagem da manhã encerra na Rodoviária, sem continuar até a Kivertron.
+    if (codigo === 'A' && referencia === '08:15') seq = seq.slice(0, seq.indexOf(1) + 1);
+    return seq;
+}
+function indiceOcorrenciaCircular(seq, id, ocorrencia) {
+    var vistos = 0;
+    return seq.findIndex(function (p) { if (p === id) vistos++; return p === id && vistos === ocorrencia; });
+}
+// Média dos relatos disponíveis por período, preservando a visita específica.
+function mediasObservadasCircular(codigo) {
+    var grupos = {};
+    Object.keys(CONFIG_HORARIOS.observacoes).filter(function (key) { return key.startsWith(codigo + '_'); }).forEach(function (key) {
+        CONFIG_HORARIOS.observacoes[key].forEach(function (r) {
+            var chave = r.pontoId + ':' + r.ocorrencia;
+            if (!grupos[chave]) grupos[chave] = { pontoId: r.pontoId, ocorrencia: r.ocorrencia, soma: 0, n: 0 };
+            grupos[chave].soma += (r.de + r.ate) / 2;
+            grupos[chave].n++;
         });
     });
-
-    passagens.sort(function (a, b) { return a.minutos - b.minutos; });
-    return passagens;
+    return Object.values(grupos).map(function (g) { return { pontoId: g.pontoId, ocorrencia: g.ocorrencia, minuto: g.soma / g.n }; });
 }
-
-function obterHorariosDoPonto(pontoId, diaTipo) {
-    var passagens = calcularPassagensDoPonto(pontoId, diaTipo);
-    var vistos = {};
-    var out = [];
-    passagens.forEach(function (p) {
-        if (!vistos[p.horario]) {
-            vistos[p.horario] = true;
-            out.push(p.horario);
-        }
+var VIAGENS_CIRCULAR = {};
+function construirViagemCircular(codigo, referencia) {
+    var chave = codigo + '_' + referencia;
+    if (VIAGENS_CIRCULAR[chave]) return VIAGENS_CIRCULAR[chave];
+    var seq = sequenciaViagemCircular(codigo, referencia);
+    if (!seq.length) return { sequencia: [], tempos: [] };
+    // Fechamento do circuito da manhã na mesma fase da volta seguinte (60 min).
+    // A referência da manhã é uma fase de cálculo, não nova saída da garagem.
+    var completa = seq.slice();
+    if (codigo === 'A' && referencia !== '08:15') completa.push(33);
+    var distancias = [0], pesos = [];
+    for (var i = 1; i < completa.length; i++) {
+        var p = getPontoCircular(completa[i - 1]), q = getPontoCircular(completa[i]);
+        var d = p && q && hasCoords(p) && hasCoords(q) ? distanceKm(+p.lat, +p.lng, +q.lat, +q.lng) : 0;
+        pesos.push(Number.isFinite(d) && d > 0 ? d : null);
+    }
+    var validos = pesos.filter(function (v) { return v !== null; });
+    var mediaDistancia = validos.length ? validos.reduce(function (a,b) { return a+b; },0)/validos.length : 1;
+    pesos.forEach(function (p) { distancias.push(distancias[distancias.length-1] + (p || mediaDistancia)); });
+    var ancoras = mediasObservadasCircular(codigo).map(function (r) {
+        return { indice: indiceOcorrenciaCircular(completa,r.pontoId,r.ocorrencia), minuto:r.minuto, tipo:'media' };
+    }).filter(function (a) { return a.indice >= 0; });
+    ancoras.unshift({ indice:0, minuto:0, tipo:codigo === 'B' ? 'informado' : 'fase' });
+    if (codigo === 'A') {
+        if (referencia === '08:15') {
+            // Usa o mesmo tempo Hospital → Rodoviária do circuito padrão.
+            var padrao = construirViagemCircular('A','07:15');
+            ancoras.push({ indice:completa.length-1, minuto:padrao.tempos[padrao.sequencia.indexOf(1)].de, tipo:'estimado' });
+        } else ancoras.push({ indice:completa.length-1, minuto:60, tipo:'ciclo' });
+    }
+    ancoras.sort(function (a,b) { return a.indice-b.indice; });
+    var tempos = completa.map(function () { return null; });
+    ancoras.forEach(function (a,i) {
+        if (i && (a.indice <= ancoras[i-1].indice || a.minuto <= ancoras[i-1].minuto)) throw Error('Âncoras fora de ordem: '+chave);
+        tempos[a.indice]={de:a.minuto,ate:a.minuto,tipo:a.tipo};
     });
-    return out;
+    for (var a=0; a<ancoras.length-1; a++) {
+        var inicio=ancoras[a],fim=ancoras[a+1];
+        for (var j=inicio.indice+1;j<fim.indice;j++) {
+            var proporcao=(distancias[j]-distancias[inicio.indice])/(distancias[fim.indice]-distancias[inicio.indice]);
+            var valor=inicio.minuto+(fim.minuto-inicio.minuto)*proporcao;
+            tempos[j]={de:valor,ate:valor,tipo:'estimado'};
+        }
+    }
+    // Cauda da tarde: ritmo médio ponderado de TODO o trecho observado,
+    // evitando projetar uma volta inteira pela velocidade de um trecho curto.
+    var primeira=ancoras[0],ultima=ancoras[ancoras.length-1];
+    var minutosPorKm=(ultima.minuto-primeira.minuto)/(distancias[ultima.indice]-distancias[primeira.indice]);
+    for (var k=ultima.indice+1;k<completa.length;k++) {
+        var estimado=ultima.minuto+(distancias[k]-distancias[ultima.indice])*minutosPorKm;
+        tempos[k]={de:estimado,ate:estimado,tipo:'estimado'};
+    }
+    var resultado={sequencia:seq,tempos:tempos.slice(0,seq.length)};
+    VIAGENS_CIRCULAR[chave]=resultado;
+    return resultado;
 }
 
-
-// ========================================
-// CIRCULAR: PRÓXIMO ÔNIBUS (ESTADO HONESTO)
-// ========================================
-
-function encontrarPassagens(pontoId, agora, diaTipo) {
+function calcularPassagensDoPonto(pontoId, dia) {
+    var passagens = [];
+    var idTrajeto = CONFIG_HORARIOS.correspondencias[pontoId] || pontoId;
+    Object.keys(CONFIG_HORARIOS.rotas).forEach(function (codigo) {
+        obterSaidasDoDia(CONFIG_HORARIOS.rotas[codigo], dia).forEach(function (referencia) {
+            var viagem = construirViagemCircular(codigo, referencia), ocorrencias = {};
+            viagem.sequencia.forEach(function (id, posicao) {
+                ocorrencias[id] = (ocorrencias[id] || 0) + 1;
+                var t = viagem.tempos[posicao];
+                if (String(id) !== String(idTrajeto) || !t) return;
+                var base = horarioParaMinutos(referencia);
+                var de = Math.round(base + t.de), ate = Math.round(base + t.ate);
+                var faixa = de === ate ? null : { de: minutosParaHorario(de), ate: minutosParaHorario(ate) };
+                if (faixa) faixa.label = faixa.de + '–' + faixa.ate;
+                passagens.push({
+                    linha: 'circular', nomeLinha: 'Circular', rota: codigo,
+                    nomeRota: CONFIG_HORARIOS.rotas[codigo].nome, saida: referencia,
+                    pontoId: pontoId, posicao: posicao, ocorrencia: ocorrencias[id],
+                    embarque: !(id === 1 && posicao === viagem.sequencia.length - 1),
+                    horario: minutosParaHorario(de), minutos: de, minutosFim: ate,
+                    tipo: t.tipo, faixa: faixa, aproximado: t.tipo !== 'informado'
+                });
+            });
+        });
+    });
+    return passagens.sort(function (a, b) { return a.minutos - b.minutos; });
+}
+function obterHorariosDoPonto(id, dia) {
+    return Array.from(new Set(calcularPassagensDoPonto(id, dia).filter(function(p) { return p.embarque; }).map(function (p) { return p.horario; })));
+}
+function rotuloPassagemCircular(p) { return p.horario; }
+function origemPassagemCircular(p) {
+    return p.tipo === 'informado' ? 'Saída da Rodoviária' : 'Horário estimado';
+}
+function encontrarPassagens(id, agora, dia) {
     agora = agora || new Date();
-    diaTipo = diaTipo || getCurrentDayType();
-    var passagens = calcularPassagensDoPonto(pontoId, diaTipo);
+    dia = dia || diaCircular(agora);
+    if (dia === 'domingo') return { encontrado: false, situacao: 'sem_operacao', estado: 'sem_operacao', mensagem: 'Não opera aos domingos', pontoId: id };
+    var passagens = calcularPassagensDoPonto(id, dia);
+    if (!passagens.length) return { encontrado: false, situacao: 'sem_trajeto', estado: 'sem_trajeto', mensagem: 'A confirmar', pontoId: id };
     var agoraMin = agora.getHours() * 60 + agora.getMinutes();
-
-    if (passagens.length === 0) {
-        var msg = diaTipo === 'domingo'
-            ? 'Não opera aos domingos'
-            : 'Sem horário';
-        return { encontrado: false, estado: 'sem_horario', situacao: 'sem_horario', pontoId: pontoId, mensagem: msg };
-    }
-
-    var proxima = null;
-    for (var i = 0; i < passagens.length; i++) {
-        if (passagens[i].minutos >= agoraMin) { proxima = passagens[i]; break; }
-    }
-
-    if (!proxima) {
-        return { encontrado: false, estado: 'encerrado', situacao: 'encerrado', pontoId: pontoId, mensagem: 'Sem ônibus hoje' };
-    }
-
-    var inc = janelaPassagem();
-    var diff = proxima.minutos - agoraMin;
-
-    var situacao;
-    if (diff <= inc.depois) situacao = 'no_ponto';
-    else situacao = 'aguardando';
-
-    var estado = situacao === 'no_ponto' ? 'chegando' : 'proximo';
-    var label;
-    if (situacao === 'no_ponto') label = 'No ponto';
-    else if (diff <= 1) label = 'Agora';
-    else label = formatMinutes(diff, proxima.horario);
-
-    var faixa = {
-        de: minutosParaHorario(proxima.minutos - inc.antes),
-        ate: minutosParaHorario(proxima.minutos + inc.depois)
+    var proxima = passagens.find(function (p) { return p.embarque && p.minutosFim >= agoraMin; });
+    if (!proxima) return {
+        encontrado: false, situacao: 'sem_estimativa', estado: 'sem_estimativa', pontoId: id,
+        mensagem: 'Fim dos horários',
+        aviso: ''
     };
-    faixa.label = faixa.de + '–' + faixa.ate;
-
-    return {
-        encontrado: true,
-        pontoId: pontoId,
-        rota: proxima.rota,
-        nomeRota: proxima.nomeRota,
-        saida: proxima.saida,
-        posicao: proxima.posicao,
-        horario: proxima.horario,
-        esperado: proxima.horario,
-        minutos: diff,
-        minutosRestantes: diff,
-        estado: estado,
-        situacao: situacao,
-        faixa: faixa,
-        label: label
-    };
+    return Object.assign({}, proxima, {
+        encontrado: true, esperado: proxima.horario,
+        minutos: Math.max(0, proxima.minutos - agoraMin), minutosRestantes: Math.max(0, proxima.minutos - agoraMin),
+        situacao: 'referencia', estado: 'referencia', label: rotuloPassagemCircular(proxima),
+        aviso: ''
+    });
+}
+function apresentarProximaCircular(id, agora, dia) {
+    var p = encontrarPassagens(id, agora, dia);
+    return Object.assign({}, p, { time: p.encontrado ? p.horario : '--', label: p.encontrado ? p.label : p.mensagem,
+        minutes: p.encontrado ? p.minutosRestantes : Infinity });
+}
+function obterTextoProximoOnibus(id) {
+    var p = apresentarProximaCircular(id);
+    return { texto: p.label, horario: p.time === '--' ? null : p.time, estado: p.estado };
 }
 
-// Wrapper pronto para a UI (cards/badges): devolve { time, label, minutos, faixa, situacao }.
-function apresentarProximaCircular(pontoId, agora, diaTipo) {
-    var r = encontrarPassagens(pontoId, agora, diaTipo);
-    if (!r.encontrado) {
-        return {
-            encontrado: false,
-            time: '--',
-            label: r.mensagem || 'Sem horário',
-            minutos: Number.POSITIVE_INFINITY,
-            situacao: r.situacao,
-            faixa: null
-        };
-    }
-    return {
-        encontrado: true,
-        time: r.horario,
-        label: r.label,
-        minutos: r.minutos,
-        situacao: r.situacao,
-        faixa: r.faixa,
-        rota: r.nomeRota,
-        saida: r.saida
-    };
-}
-
-function obterTextoProximoOnibus(pontoId) {
-    var r = encontrarPassagens(pontoId);
-    if (!r.encontrado) {
-        return { texto: 'Sem ônibus hoje', horario: null, estado: 'encerrado' };
-    }
-    if (r.situacao === 'no_ponto') {
-        return { texto: 'No ponto', horario: r.horario, estado: 'chegando' };
-    }
-    return { texto: 'Próximo ônibus', horario: r.horario, estado: 'proximo' };
-}
-
-
-// ========================================
-// PLENA: OBTER SENTIDOS QUE PASSAM PELO PONTO
-// ========================================
 
 function obterSentidosPlena(pontoId) {
     if (!CONFIG_PLENA || !CONFIG_PLENA.sentidos) return [];

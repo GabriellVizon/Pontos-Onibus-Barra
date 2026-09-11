@@ -6,6 +6,8 @@
   var currentData = null;
   var currentTab = 'horarios';
   var liveTimer = null;
+  var routeState = {};
+  var returnFocus = null;
 
   var modalState = {
     linhaSelecionada: 'circular',
@@ -57,6 +59,17 @@
           '</div>' +
         '</div>' +
       '</div>';
+    var bar = modalEl.querySelector('.modal-tab-bar');
+    bar.setAttribute('role','tablist');
+    bar.setAttribute('aria-label','Detalhes do ponto');
+    modalEl.querySelectorAll('.modal-tab-btn').forEach(function(btn){
+      btn.id='modal-tab-'+btn.dataset.tab;
+      btn.setAttribute('role','tab');
+      btn.setAttribute('aria-controls','modalTabContent');
+    });
+    var panel=modalEl.querySelector('#modalTabContent');
+    panel.setAttribute('role','tabpanel');
+    panel.setAttribute('tabindex','0');
     document.body.appendChild(modalEl);
   }
 
@@ -85,23 +98,24 @@
       if (onFavToggleCallback) onFavToggleCallback(id);
     });
 
-    var tabBtns = modalEl.querySelectorAll('.modal-tab-btn');
-    var tabContent = modalEl.querySelector('#modalTabContent');
-    for (var i = 0; i < tabBtns.length; i++) {
-      tabBtns[i].addEventListener('click', function () {
-        var newTab = this.getAttribute('data-tab');
-        if (newTab === currentTab) return;
-        for (var j = 0; j < tabBtns.length; j++) tabBtns[j].classList.remove('active');
-        this.classList.add('active');
-        currentTab = newTab;
-        if (!currentData) return;
-        tabContent.style.opacity = '0';
-        setTimeout(function () {
-          renderTabContent(currentData, currentTab);
-          tabContent.style.opacity = '1';
-        }, 200);
+    var tabBtns = Array.from(modalEl.querySelectorAll('.modal-tab-btn'));
+    tabBtns.forEach(function(btn,index){
+      btn.addEventListener('click',function(){ activateTab(btn.dataset.tab); });
+      btn.addEventListener('keydown',function(e){
+        var next=e.key==='ArrowRight'?(index+1)%2:e.key==='ArrowLeft'?(index+1)%2:e.key==='Home'?0:e.key==='End'?1:null;
+        if(next!==null){e.preventDefault();tabBtns[next].focus();activateTab(tabBtns[next].dataset.tab);}
       });
-    }
+    });
+  }
+
+  function activateTab(tab) {
+    if(!currentData)return;
+    currentTab=tab;
+    renderTabContent(currentData,tab);
+    var body=modalEl.querySelector('#modalBody');
+    var bar=modalEl.querySelector('.modal-tab-bar');
+    body.scrollTop+=bar.getBoundingClientRect().top-body.getBoundingClientRect().top;
+    if(tab==='horarios'&&miniMap)requestAnimationFrame(function(){miniMap.invalidateSize();});
   }
 
   function onKeyDown(e) {
@@ -110,9 +124,9 @@
   }
 
   function trapFocus(e) {
-    var focusable = modalEl.querySelectorAll(
-      'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    );
+    var focusable = Array.from(modalEl.querySelectorAll(
+      'button:not([disabled]):not([tabindex="-1"]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )).filter(function(el){return el.getClientRects().length && getComputedStyle(el).visibility!=='hidden';});
     if (focusable.length === 0) return;
     var first = focusable[0];
     var last = focusable[focusable.length - 1];
@@ -132,6 +146,8 @@
   }
 
   function open(data) {
+    returnFocus = document.activeElement;
+    routeState = {};
     currentData = data;
     currentTab = 'horarios';
     var tabBtns = modalEl.querySelectorAll('.modal-tab-btn');
@@ -199,6 +215,12 @@
     liveTimer = null;
     destroyMiniMap();
     if (onCloseCallback) onCloseCallback();
+    function available(el){return el && el.isConnected && !el.closest('.modal-overlay') && el.getClientRects().length && getComputedStyle(el).visibility!=='hidden';}
+    var target=returnFocus;
+    if(!available(target)) {
+      target=Array.from(document.querySelectorAll('#searchMobileBtn, #searchInput, #mobileMenuBtn')).find(available);
+    }
+    if(target)target.focus({preventScroll:true});
   }
 
   function updateLive() {
@@ -238,7 +260,7 @@
       }
       return { time: '--', label: 'Sem dados', minutes: Infinity };
     }
-    // CIRCULAR: cálculo por ponto (com janela ±) — usa o tipo de dia atual, igual à
+    // CIRCULAR: referências parciais por ponto — usa o tipo de dia atual, igual à
     // lista de horários exibida (diaTabPlena pertence à Plena).
     if (typeof encontrarPassagens === 'function') {
       var pass = encontrarPassagens(currentData.ponto.id);
@@ -389,7 +411,7 @@
 
   function renderNextBus(data) {
     var el = modalEl.querySelector('#modalNextBus');
-    var next = data.next || computeNextForModal();
+    var next = modalState.linhaSelecionada === 'circular' ? apresentarProximaCircular(data.ponto.id) : (data.next || computeNextForModal());
     var nextLabel = next ? next.label : '--';
 
     var pillName;
@@ -402,14 +424,14 @@
 
     var pillColor = modalState.linhaSelecionada === 'plena' ? '#2196f3' : '';
 
-    var faixaHtml = (next && next.faixa)
-      ? '<div class="next-bus-faixa" title="Janela de previsão — sem rastreamento em tempo real">&#8776; ' + escapeHtml(next.faixa.label) + '</div>'
+    var faixaHtml = (modalState.linhaSelecionada === 'plena' && next && next.faixa)
+      ? '<div class="next-bus-faixa" title="Intervalo aproximado dos registros; não é garantia">&#8776; ' + escapeHtml(next.faixa.label) + '</div>'
       : '';
 
     el.innerHTML =
       '<div class="next-bus-card"' + (pillColor ? ' style="background:' + pillColor + '"' : '') + '>' +
         '<div class="next-bus-left">' +
-          '<span class="next-bus-label">Pr&oacute;ximo &ocirc;nibus</span>' +
+          '<span class="next-bus-label">' + (modalState.linhaSelecionada === 'circular' ? 'Próximo horário' : 'Próximo ônibus') + '</span>' +
           '<div class="next-bus-main">' +
             '<i class="ti ti-bus"></i>' +
             '<span class="next-bus-time">' + escapeHtml(nextLabel) + '</span>' +
@@ -419,7 +441,7 @@
         '<div class="next-bus-pill">' +
           '<span class="next-bus-pill-name">' + escapeHtml(pillName) + '</span>' +
         '</div>' +
-      '</div>';
+      '</div>' + (modalState.linhaSelecionada === 'circular' ? '<p class="circular-notice">' + escapeHtml(CircularUI.aviso) + '</p>' : '');
   }
 
   function renderInfoRow(data) {
@@ -462,6 +484,10 @@
   function renderReminderState(data) {
     var wrap = modalEl.querySelector('#modalReminderWrap');
     if (!wrap) return;
+    if (modalState.linhaSelecionada === 'circular') {
+      wrap.innerHTML = '';
+      return;
+    }
     if (typeof Reminders === 'undefined') { wrap.innerHTML = ''; return; }
 
     var stopId = data.ponto.id;
@@ -531,6 +557,14 @@
   function renderTabContent(data, tab) {
     var el = modalEl.querySelector('#modalTabContent');
     if (!el) return;
+    modalEl.classList.toggle('show-route',tab==='percurso');
+    modalEl.querySelectorAll('.modal-tab-btn').forEach(function(btn){
+      var active=btn.dataset.tab===tab;
+      btn.classList.toggle('active',active);
+      btn.setAttribute('aria-selected',String(active));
+      btn.tabIndex=active?0:-1;
+    });
+    el.setAttribute('aria-labelledby','modal-tab-'+tab);
     if (tab === 'horarios') {
       renderScheduleTab(el, data);
     } else {
@@ -549,27 +583,12 @@
   }
 
   function renderScheduleCircular(el, data) {
-    var horarios = data.horarios;
-    if (!horarios || horarios.length === 0) {
-      var emptyMsg = getCurrentDayType() === 'domingo'
-        ? 'Não há operação aos domingos.'
-        : 'Nenhum horário disponível.';
-      el.innerHTML = '<p class="tab-empty">' + escapeHtml(emptyMsg) + '</p>';
-      return;
-    }
-    var nextTime = data.next ? data.next.time : null;
-    var times = horarios.map(function (t) {
-      var cls = t === nextTime ? ' modal-time-active' : '';
-      return '<span class="modal-time' + cls + '">' + escapeHtml(t) + '</span>';
-    }).join('');
-    el.innerHTML =
-      '<div class="schedule-group">' +
-        '<div class="schedule-line-label"><span class="schedule-dot" style="background:' + (data.lineColor || BUS_COLOR) + '"></span>Rota Circular</div>' +
-        '<div class="modal-times-grid">' + times + '</div>' +
-      '</div>';
+    var old = el.querySelector('details'), opened = old && old.open;
+    el.innerHTML = CircularUI.schedule(data.ponto.id, getCurrentDayType(), true);
+    var details = el.querySelector('details'); if (details && opened) details.open = true;
   }
 
-  function renderSchedulePlena(el, data) {
+    function renderSchedulePlena(el, data) {
     var html = '';
 
     if (modalState.sentidosPlena.length > 1) {
@@ -650,6 +669,10 @@
   }
 
   function renderRouteTab(el, data) {
+    if (modalState.linhaSelecionada === 'circular') {
+      routeState=CircularRoute.mount(el,data,routeState);
+      return;
+    }
     var allLinePoints;
     if (modalState.linhaSelecionada === 'plena') {
       var sentido = modalState.sentidosPlena.find(function (s) { return s.id === modalState.sentidoPlena; });

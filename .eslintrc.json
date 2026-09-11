@@ -76,7 +76,15 @@
     "getGpsDeniedPersisted": "readonly",
     "setGpsDeniedPersisted": "readonly",
     "queryGeolocationPermission": "readonly",
-    "shouldRequestLocation": "readonly"
+    "shouldRequestLocation": "readonly",
+    "CircularUI": "readonly",
+    "diaCircular": "readonly",
+    "rotuloPassagemCircular": "readonly",
+    "origemPassagemCircular": "readonly",
+    "sequenciaViagemCircular": "readonly",
+    "construirViagemCircular": "readonly",
+    "mediasObservadasCircular": "readonly",
+    "CircularRoute": "readonly"
   },
   "parserOptions": {
     "ecmaVersion": 2020,
@@ -89,18 +97,6 @@
     "no-var": "off",
     "no-empty": "off"
   },
-  "overrides": [
-    {
-      "files": ["js/utils.js", "js/horarios.js"],
-      "rules": {
-        "no-unused-vars": "off"
-      }
-    }
-  ],
-  "ignorePatterns": [
-    "node_modules/",
-    "package-lock.json"
-  ],
   "overrides": [
     {
       "files": [
@@ -120,5 +116,9 @@
         "no-undef": "off"
       }
     }
+  ],
+  "ignorePatterns": [
+    "node_modules/",
+    "package-lock.json"
   ]
 }

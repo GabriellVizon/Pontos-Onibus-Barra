@@ -63,7 +63,7 @@
                 <!-- Estimate Notice -->
                 <div class="estimate-notice" role="note">
                     <i class="ti ti-info-circle"></i>
-                    <span><strong>Previsões aproximadas.</strong> Sem rastreamento do ônibus em tempo real — o horário pode variar alguns minutos.</span>
+                    <span>Horários aproximados. Chegue alguns minutos antes.</span>
                 </div>
 
                 <!-- Line Detail Card -->
@@ -94,10 +94,10 @@
                         <div class="info-card">
                             <div class="info-card-header">
                                 <i class="ti ti-route"></i>
-                                <span class="info-card-label">PRÓXIMO ÔNIBUS</span>
+                                <span class="info-card-label" id="selectedNextHeading">PRÓXIMO HORÁRIO</span>
                             </div>
-                            <span class="info-card-value small-value" id="selectedLine">Rota Circular</span>
-                            <p class="info-card-sub" id="selectedNext">Próxima saída calculada pelo horário atual.</p>
+                            <span class="info-card-value small-value" id="selectedNext">Selecione um ponto.</span>
+                            <p class="info-card-sub" id="selectedLine">Rota Circular</p>
                         </div>
                     </div>
 
@@ -177,10 +177,12 @@
     <script defer src="js/theme.js"></script>
     <script defer src="js/favorites.js"></script>
     <script defer src="js/reminders.js"></script>
+    <script defer src="js/circular-route.js"></script>
     <script defer src="js/modal.js"></script>
     <script defer src="js/appShell.js"></script>
     <script defer src="js/bootstrap-points.js"></script>
     <script defer src="js/horarios.js"></script>
+    <script defer src="js/circular-ui.js"></script>
     <script defer src="js/pontos.js"></script>
 </body>
 

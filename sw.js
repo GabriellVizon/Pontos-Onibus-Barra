@@ -1,4 +1,4 @@
-const CACHE_NAME = 'barrabus-v15';
+const CACHE_NAME = 'barrabus-v19-abas-historico';
 
 const PRE_CACHE_URLS = [
   '/index.html',
@@ -12,7 +12,9 @@ const PRE_CACHE_URLS = [
   '/js/favorites.js',
   '/js/reminders.js',
   '/js/horarios.js',
+  '/js/circular-ui.js',
   '/js/modal.js',
+  '/js/circular-route.js',
   '/js/appShell.js',
   '/js/bootstrap-home.js',
   '/js/bootstrap-points.js',
