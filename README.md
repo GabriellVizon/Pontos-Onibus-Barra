@@ -1,10 +1,10 @@
-> Versão atual: **v4**. Veja [as duas alterações de interface](INTERFACE-V4.md).
+> Entrega atual: **BarraBus 1.0 — RC1**. Leia [alterações, testes e validação no celular](ENTREGA-1.0.md) e a [revisão dos pontos](REVISAO-DOS-PONTOS.md).
 
 # BarraBus
 
 **Interface v3:** [Página inicial e percurso corrigidos](INTERFACE-V3.md).
 
-Pontos de ônibus e horários de Barra Bonita (SP). Site estático em HTML/CSS/JS puro (PWA, funciona offline).
+Pontos de ônibus e horários de Barra Bonita (SP). Site estático em HTML/CSS/JS puro. PWA com dados disponíveis offline após o primeiro carregamento; imagens novas do mapa dependem da conexão.
 
 **Circular v2: horários estimados para todos os pontos, calculados por médias de cada período.** Leia [AJUSTES-CIRCULAR.md](AJUSTES-CIRCULAR.md) para conhecer os relatos incorporados, o cálculo, as limitações e como revisar esta versão. Não há rastreamento do ônibus.
 
@@ -25,8 +25,8 @@ Ou use a extensão "Live Server" do VS Code.
 index.html      → Home (busca, favoritos, pontos próximos, mapa)
 pontos.html     → Pontos e horários (tabela, mapa, sidebar)
 css/shared.css  → Estilos compartilhados (variáveis de tema, modal, cards)
-css/index.css   → Estilos da Home
-css/pontos.css  → Estilos da página Pontos
+index.css   → Estilos da Home
+pontos.css  → Estilos da página Pontos
 js/utils.js     → Funções puras (distância, horários, cache, helpers)
 js/theme.js     → Tema claro/escuro
 js/favorites.js → Favoritos (localStorage)
@@ -35,7 +35,7 @@ js/modal.js     → Modal de detalhe do ponto (com mini-mapa, percurso e próxim
 js/appShell.js  → Shell da página (sidebar, topbar, splash, footer)
 js/bootstrap-home.js / bootstrap-points.js → Renderizam o shell por página
 js/pontos.js    → Lógica da página Pontos
-js/script.js    → Lógica da Home
+script.js    → Lógica da Home
 dados/pontos.json    → Pontos (id, ordem, nome, endereço, bairro, lat, lng)
 dados/horarios.json  → Horários (uteis, sabado, domingo)
 sw.js           → Service Worker (offline/PWA)

@@ -1,6 +1,8 @@
 (function () {
   var modalEl = null;
   var miniMap = null;
+  var miniMarker = null;
+  var context = {};
   var onCloseCallback = null;
   var onFavToggleCallback = null;
   var currentData = null;
@@ -19,6 +21,7 @@
   };
 
   function init(options) {
+    context = options || {};
     onCloseCallback = options && options.onClose ? options.onClose : null;
     onFavToggleCallback = options && options.onFavToggle ? options.onFavToggle : null;
     buildModal();
@@ -35,6 +38,7 @@
           '<div class="modal-header-text">' +
             '<h2 class="modal-title" id="modalTitle"></h2>' +
             '<p class="modal-address" id="modalAddress"></p>' +
+            '<p class="modal-address" id="modalReference" hidden></p>' +
           '</div>' +
           '<div class="modal-header-actions">' +
             '<button class="modal-fav fav-btn" id="modalFavBtn" aria-label="Favoritar"><i class="ti ti-heart"></i></button>' +
@@ -45,6 +49,7 @@
           '<div class="modal-section modal-line-selector-wrap" id="modalLineSelector"></div>' +
           '<div class="modal-section modal-next-bus" id="modalNextBus"></div>' +
           '<div class="modal-section modal-info-row" id="modalInfoRow"></div>' +
+          '<div class="modal-location-help" id="modalLocationHelp"></div>' +
           '<div class="modal-section modal-actions-row" id="modalActions"></div>' +
           '<div class="modal-section modal-reminder-wrap" id="modalReminderWrap"></div>' +
           '<div class="modal-section modal-map-wrap" id="modalMapWrap">' +
@@ -150,6 +155,7 @@
     routeState = {};
     currentData = data;
     currentTab = 'horarios';
+    syncLocation();
     var tabBtns = modalEl.querySelectorAll('.modal-tab-btn');
     for (var i = 0; i < tabBtns.length; i++) {
       tabBtns[i].classList.toggle('active', tabBtns[i].getAttribute('data-tab') === 'horarios');
@@ -174,7 +180,7 @@
         ? obterAbasDiaPlena(modalState.sentidoPlena, data.ponto.id)
         : [];
       modalState.abasDiaPlena = abas;
-      modalState.diaTabPlena = abas.length > 0 ? abas[0].id : 'uteis';
+      modalState.diaTabPlena = abas.some(function(a){return a.id === getCurrentDayType();}) ? getCurrentDayType() : (abas.length ? abas[0].id : 'uteis');
     } else {
       modalState.sentidosPlena = [];
       modalState.sentidoPlena = null;
@@ -182,6 +188,7 @@
       modalState.diaTabPlena = 'uteis';
     }
 
+    data.next = computeNextForModal();
     renderHeader(data);
     renderLineSelector();
     renderNextBus(data);
@@ -204,7 +211,7 @@
     }, 30000);
 
     setTimeout(function () {
-      if (data.ponto && data.ponto.lat != null) initMiniMap(data);
+      if (isOpen() && currentData && hasCoords(currentData.ponto)) initMiniMap(currentData);
     }, 300);
   }
 
@@ -221,6 +228,55 @@
       target=Array.from(document.querySelectorAll('#searchMobileBtn, #searchInput, #mobileMenuBtn')).find(available);
     }
     if(target)target.focus({preventScroll:true});
+  }
+
+  // The selected stop is a destination; the GPS origin belongs to the page.
+  function syncLocation() {
+    if (!currentData) return;
+    var origin = context.getUserPosition ? context.getUserPosition() : null;
+    currentData.userPosition = origin && hasCoords(origin) ? origin : null;
+    currentData.distancia = currentData.userPosition && hasCoords(currentData.ponto)
+      ? distanceKm(origin.lat, origin.lng, currentData.ponto.lat, currentData.ponto.lng) : null;
+    currentData.distanciaText = null;
+  }
+
+  function refreshLocation() {
+    if (!currentData || !isOpen()) return;
+    syncLocation();
+    renderInfoRow(currentData);
+    renderActions(currentData);
+  }
+
+  function selectPoint(id) {
+    var point = context.resolvePoint && context.resolvePoint(Number(id), modalState.linhaSelecionada);
+    if (!point || !currentData) return;
+    currentData = Object.assign({}, currentData, {
+      ponto: point,
+      horarios: modalState.linhaSelecionada === 'circular' ? obterHorariosDoPonto(point.id) : [],
+      isFav: Favorites.isFavorite(String(point.id))
+    });
+    if (modalState.linhaSelecionada === 'plena') {
+      modalState.sentidosPlena = obterSentidosPlena(point.id);
+      if (!modalState.sentidosPlena.some(function(s){return s.id === modalState.sentidoPlena;})) {
+        modalState.sentidoPlena = modalState.sentidosPlena.length ? modalState.sentidosPlena[0].id : null;
+      }
+      modalState.abasDiaPlena = obterAbasDiaPlena(modalState.sentidoPlena, point.id);
+      if (!modalState.abasDiaPlena.some(function(d){return d.id === modalState.diaTabPlena;})) {
+        modalState.diaTabPlena = modalState.abasDiaPlena.length ? modalState.abasDiaPlena[0].id : 'uteis';
+      }
+    }
+    syncLocation();
+    currentData.next = computeNextForModal();
+    renderHeader(currentData);
+    renderNextBus(currentData);
+    renderInfoRow(currentData);
+    renderActions(currentData);
+    renderReminderState(currentData);
+    renderTabContent(currentData, currentTab);
+    initMiniMap(currentData);
+    if (context.onPointSelected) context.onPointSelected(point.id);
+    var title = modalEl.querySelector('#modalTitle');
+    title.setAttribute('aria-live','polite');
   }
 
   function updateLive() {
@@ -284,6 +340,9 @@
     modalEl.querySelector('#modalTitle').textContent = data.ponto.nome;
     var addrEl = modalEl.querySelector('#modalAddress');
     if (addrEl) addrEl.textContent = data.ponto.endereco;
+    var reference = modalEl.querySelector('#modalReference');
+    reference.textContent = data.ponto.referencia || '';
+    reference.hidden = !data.ponto.referencia;
     var favBtn = modalEl.querySelector('#modalFavBtn');
     favBtn.setAttribute('data-id', data.ponto.id);
     favBtn.classList.toggle('favorited', !!data.isFav);
@@ -346,7 +405,7 @@
         ? obterAbasDiaPlena(modalState.sentidoPlena, currentData.ponto.id)
         : [];
       modalState.abasDiaPlena = abas;
-      modalState.diaTabPlena = abas.length > 0 ? abas[0].id : 'uteis';
+      modalState.diaTabPlena = abas.some(function(a){return a.id === getCurrentDayType();}) ? getCurrentDayType() : (abas.length ? abas[0].id : 'uteis');
     } else {
       modalState.sentidosPlena = [];
       modalState.sentidoPlena = null;
@@ -412,7 +471,7 @@
   function renderNextBus(data) {
     var el = modalEl.querySelector('#modalNextBus');
     var next = modalState.linhaSelecionada === 'circular' ? apresentarProximaCircular(data.ponto.id) : (data.next || computeNextForModal());
-    var nextLabel = next ? next.label : '--';
+    var nextLabel = next ? (modalState.linhaSelecionada === 'plena' && next.time !== '--' ? next.time : next.label) : '--';
 
     var pillName;
     if (modalState.linhaSelecionada === 'plena') {
@@ -431,7 +490,7 @@
     el.innerHTML =
       '<div class="next-bus-card"' + (pillColor ? ' style="background:' + pillColor + '"' : '') + '>' +
         '<div class="next-bus-left">' +
-          '<span class="next-bus-label">' + (modalState.linhaSelecionada === 'circular' ? 'Próximo horário' : 'Próximo ônibus') + '</span>' +
+          '<span class="next-bus-label">' + 'Próximo horário previsto' + '</span>' +
           '<div class="next-bus-main">' +
             '<i class="ti ti-bus"></i>' +
             '<span class="next-bus-time">' + escapeHtml(nextLabel) + '</span>' +
@@ -441,13 +500,13 @@
         '<div class="next-bus-pill">' +
           '<span class="next-bus-pill-name">' + escapeHtml(pillName) + '</span>' +
         '</div>' +
-      '</div>' + (modalState.linhaSelecionada === 'circular' ? '<p class="circular-notice">' + escapeHtml(CircularUI.aviso) + '</p>' : '');
+      '</div>' + '<p class="circular-notice">' + escapeHtml(CircularUI.aviso) + '</p>';
   }
 
   function renderInfoRow(data) {
     var el = modalEl.querySelector('#modalInfoRow');
     var ponto = data.ponto;
-    var dText = data.distanciaText || (data.distancia != null ? formatDistance(data.distancia) : null);
+    var dText = data.distancia != null ? formatDistance(data.distancia) : 'Distância indisponível';
 
     var html = '';
     if (dText) {
@@ -455,23 +514,33 @@
     }
     html += '<div class="info-col-card"><i class="ti ti-home"></i><div><p class="info-col-label">Bairro</p><p class="info-col-value">' + escapeHtml(ponto.bairro || '—') + '</p></div></div>';
     el.innerHTML = html;
+    var help = modalEl.querySelector('#modalLocationHelp');
+    help.innerHTML = data.userPosition ? '' : '<span>Ative sua localização para ver a distância até este ponto.</span>' +
+      (context.requestLocation ? '<button type="button" id="modalRetryLocation">Tentar novamente</button>' : '');
+    var retry = help.querySelector('button');
+    if (retry) retry.addEventListener('click', function(){
+      retry.disabled = true;
+      retry.textContent = 'Buscando localização…';
+      context.requestLocation();
+    });
   }
 
   function renderActions(data) {
     var el = modalEl.querySelector('#modalActions');
     var ponto = data.ponto;
-    var hasCoords = ponto.lat != null && ponto.lng != null;
-    var routeUrl = hasCoords ? 'https://www.google.com/maps/dir/?api=1&destination=' + ponto.lat + ',' + ponto.lng : null;
+    var validCoords = hasCoords(ponto);
+    var routeUrl = validCoords ? 'https://www.google.com/maps/dir/?api=1&destination=' + ponto.lat + ',' + ponto.lng : null;
+    if (routeUrl && data.userPosition) routeUrl += '&origin=' + data.userPosition.lat + ',' + data.userPosition.lng + '&travelmode=walking';
 
     el.innerHTML =
-      (hasCoords ? '<button class="action-btn action-btn-red" id="modalActionMap"><i class="ti ti-map"></i> Ver mapa</button>' : '') +
-      (routeUrl ? '<a class="action-btn action-btn-outline" href="' + routeUrl + '" target="_blank" rel="noopener"><i class="ti ti-north-star"></i> Tra&ccedil;ar rota</a>' : '') +
-      '<button class="action-btn action-btn-icon" id="modalActionShare"><i class="ti ti-share"></i></button>';
+      (validCoords ? '<button class="action-btn action-btn-red" id="modalActionMap"><i class="ti ti-map"></i> Ver mapa</button>' : '') +
+      (routeUrl ? '<a id="modalActionDirections" class="action-btn action-btn-outline" href="' + routeUrl + '" target="_blank" rel="noopener"><i class="ti ti-north-star"></i> ' + (data.userPosition ? 'Traçar rota' : 'Abrir no Maps') + '</a>' : '') +
+      '<button class="action-btn action-btn-icon" id="modalActionShare" aria-label="Compartilhar ponto"><i class="ti ti-share"></i></button>';
 
     var mapBtn = modalEl.querySelector('#modalActionMap');
     if (mapBtn) {
       mapBtn.addEventListener('click', function () {
-        if (hasCoords && data.onMainMapFocus) data.onMainMapFocus(ponto);
+        if (validCoords && data.onMainMapFocus) data.onMainMapFocus(ponto);
         close();
       });
     }
@@ -662,6 +731,7 @@
         });
 
         var fresh = Object.assign({}, data, { next: computeNextForModal() });
+        renderNextBus(fresh);
         renderSchedulePlena(el, fresh);
         renderReminderState(fresh);
       });
@@ -670,7 +740,7 @@
 
   function renderRouteTab(el, data) {
     if (modalState.linhaSelecionada === 'circular') {
-      routeState=CircularRoute.mount(el,data,routeState);
+      routeState=CircularRoute.mount(el,data,routeState,selectPoint);
       return;
     }
     var allLinePoints;
@@ -698,7 +768,7 @@
       var lineColor = modalState.linhaSelecionada === 'plena' ? '#2196f3' : (data.lineColor || BUS_COLOR);
       parts.push(
         '<div class="route-stop">' +
-          '<span class="' + nameClass + '">' + escapeHtml(p.nome) + (isCurrent ? ' <i class="ti ti-map-pin"></i>' : '') + '</span>' +
+          '<button type="button" data-route-point="' + p.id + '" class="' + nameClass + '"' + (isCurrent ? ' aria-current="true"' : '') + '>' + escapeHtml(p.nome) + (isCurrent ? ' <i class="ti ti-map-pin"></i>' : '') + '</button>' +
           '<div class="' + dotClass + '"' + (isCurrent ? ' style="background:' + lineColor + ';box-shadow:0 0 0 4px ' + hexToRgba(lineColor, 0.35) + '"' : '') + '></div>' +
         '</div>'
       );
@@ -707,6 +777,7 @@
       }
     });
     el.innerHTML = '<div class="route-timeline-h"><div class="route-track">' + parts.join('') + '</div></div>';
+    el.querySelectorAll('[data-route-point]').forEach(function(btn){btn.addEventListener('click',function(){selectPoint(btn.dataset.routePoint);var selected=el.querySelector('[aria-current]');if(selected)selected.focus({preventScroll:true});});});
   }
 
   function sharePoint(data) {
@@ -733,20 +804,25 @@
   function initMiniMap(data) {
     var ponto = data.ponto;
     var container = modalEl.querySelector('#modalMiniMap');
-    if (!container || typeof L === 'undefined') return;
-    destroyMiniMap();
+    if (!container || typeof L === 'undefined' || !hasCoords(ponto)) return;
+    if (miniMap) {
+      miniMap.setView([Number(ponto.lat), Number(ponto.lng)], 16, {animate:false});
+      miniMarker.setLatLng([Number(ponto.lat), Number(ponto.lng)]);
+      miniMarker.setTooltipContent(escapeHtml(ponto.nome));
+      return;
+    }
     miniMap = L.map(container, { zoomControl: true, scrollWheelZoom: true })
       .setView([Number(ponto.lat), Number(ponto.lng)], 16);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap'
     }).addTo(miniMap);
-    L.marker([Number(ponto.lat), Number(ponto.lng)]).addTo(miniMap);
+    miniMarker = L.marker([Number(ponto.lat), Number(ponto.lng)]).addTo(miniMap).bindTooltip(escapeHtml(ponto.nome));
   }
 
   function destroyMiniMap() {
-    if (miniMap) { miniMap.remove(); miniMap = null; }
+    if (miniMap) { miniMap.remove(); miniMap = null; miniMarker = null; }
   }
 
-  window.Modal = { init: init, open: open, close: close };
+  window.Modal = { init: init, open: open, close: close, refreshLocation: refreshLocation };
 })();

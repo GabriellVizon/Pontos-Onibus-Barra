@@ -84,7 +84,8 @@
     "sequenciaViagemCircular": "readonly",
     "construirViagemCircular": "readonly",
     "mediasObservadasCircular": "readonly",
-    "CircularRoute": "readonly"
+    "CircularRoute": "readonly",
+    "observeLocationPermission": "readonly"
   },
   "parserOptions": {
     "ecmaVersion": 2020,
@@ -118,6 +119,7 @@
     }
   ],
   "ignorePatterns": [
+    "vendor/",
     "node_modules/",
     "package-lock.json"
   ]

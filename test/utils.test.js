@@ -148,6 +148,14 @@ test('pontosComDistancia calcula distância apenas com GPS', () => {
   assert.strictEqual(com[1].distancia, undefined);
 });
 
+test('revogar GPS elimina distância herdada sem alterar o cadastro', () => {
+  const ponto = { id: 1, lat: -22.4, lng: -48.5, distancia: 0.3 };
+  assert.strictEqual(pontosComDistancia([ponto], null)[0].distancia, undefined);
+  assert.strictEqual(pontosComDistancia([ponto], {lat: 91, lng: 0})[0].distancia, undefined);
+  assert.strictEqual(ponto.distancia, 0.3);
+  assert.strictEqual(hasCoords({lat: -22, lng: 181}), false);
+});
+
 test('sortPointsByContext ordena por ordem ou distância', () => {
   const a = { id: 1, ordem: 2, distancia: 5 };
   const b = { id: 2, ordem: 1, distancia: 2 };

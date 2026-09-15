@@ -25,14 +25,16 @@ function toRad(value) {
 }
 
 function hasCoords(ponto) {
-  return ponto.lat !== null
+  return !!ponto && ponto.lat !== null
     && ponto.lng !== null
     && ponto.lat !== undefined
     && ponto.lng !== undefined
     && ponto.lat !== ''
     && ponto.lng !== ''
     && Number.isFinite(Number(ponto.lat))
-    && Number.isFinite(Number(ponto.lng));
+    && Number.isFinite(Number(ponto.lng))
+    && Math.abs(Number(ponto.lat)) <= 90
+    && Math.abs(Number(ponto.lng)) <= 180;
 }
 
 function getCurrentDayType() {
@@ -138,7 +140,11 @@ function distanceKm(lat1, lng1, lat2, lng2) {
 
 function pontosComDistancia(pontos, userPosition) {
   return pontos.map(function (ponto) {
-    if (!userPosition || !hasCoords(ponto)) return Object.assign({}, ponto);
+    if (!userPosition || !hasCoords(userPosition) || !hasCoords(ponto)) {
+      var copy = Object.assign({}, ponto);
+      delete copy.distancia;
+      return copy;
+    }
     return Object.assign({}, ponto, {
       distancia: distanceKm(
         userPosition.lat,
@@ -448,4 +454,14 @@ function shouldRequestLocation() {
     if (state === 'denied') return false;      // não vale chamar: falha instantânea
     return true;                               // 'prompt' | 'granted' | 'unsupported'
   });
+}
+
+// Revoke a previously obtained origin when browser permission changes.
+function observeLocationPermission(onUnavailable) {
+  if (!navigator.permissions || !navigator.permissions.query) return;
+  navigator.permissions.query({name:'geolocation'}).then(function(status){
+    status.addEventListener('change',function(){
+      if (status.state !== 'granted') onUnavailable();
+    });
+  }).catch(function(){});
 }

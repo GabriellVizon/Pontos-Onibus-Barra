@@ -65,11 +65,14 @@
   {
     "id": 53,
     "ordem": 53,
-    "nome": "Atrás do Antigo James",
+    "nome": "R. Natale Petri, 60",
     "endereco": "60 R. Natale Petri",
     "bairro": "Recanto Regina",
     "lat": -22.4848165,
-    "lng": -48.5657136
+    "lng": -48.5657136,
+    "apelidos": [
+      "Atrás do Antigo James"
+    ]
   },
   {
     "id": 54,
@@ -110,11 +113,14 @@
   {
     "id": 12,
     "ordem": 12,
-    "nome": "Pracinha Lojas São Paulo",
+    "nome": "Praça da Rua Antônio Dario",
     "endereco": "Rua Antonio Dario",
     "bairro": "Cohab",
     "lat": -22.4732529,
-    "lng": -48.5664472
+    "lng": -48.5664472,
+    "apelidos": [
+      "Pracinha Lojas São Paulo"
+    ]
   },
   {
     "id": 13,
@@ -155,11 +161,14 @@
   {
     "id": 17,
     "ordem": 17,
-    "nome": "Esquina com Armando Moretti",
+    "nome": "Arlindo Santille × Armando Moretti",
     "endereco": "R. Arlindo Santille",
     "bairro": "Sonho Nosso IV",
     "lat": -22.4577491,
-    "lng": -48.5658353
+    "lng": -48.5658353,
+    "apelidos": [
+      "Esquina com Armando Moretti"
+    ]
   },
   {
     "id": 18,
@@ -245,11 +254,14 @@
   {
     "id": 27,
     "ordem": 27,
-    "nome": "Sorveteria (Em Frente)",
+    "nome": "Rua Prudente de Morais",
     "endereco": "Rua Prudente de Morais",
     "bairro": "Centro",
     "lat": -22.4948692,
-    "lng": -48.5607349
+    "lng": -48.5607349,
+    "apelidos": [
+      "Sorveteria (Em Frente)"
+    ]
   },
   {
     "id": 28,
@@ -308,74 +320,101 @@
   {
     "id": 37,
     "ordem": 37,
-    "nome": "Esquina com a Rua Orestes Gerin",
+    "nome": "Geraldo Salvi × Orestes Gerin",
     "endereco": "343 R. Geraldo Salvi",
     "bairro": "Sonho Nosso I",
     "lat": -22.4681558,
-    "lng": -48.5656932
+    "lng": -48.5656932,
+    "apelidos": [
+      "Esquina com a Rua Orestes Gerin"
+    ]
   },
   {
     "id": 38,
     "ordem": 38,
-    "nome": "Esquina com a Rua Papa João",
+    "nome": "Geraldo Salvi × Papa João",
     "endereco": "130 R. Geraldo Salvi",
     "bairro": "Sonho Nosso I",
     "lat": -22.46784,
-    "lng": -48.5634339
+    "lng": -48.5634339,
+    "apelidos": [
+      "Esquina com a Rua Papa João"
+    ]
   },
   {
     "id": 39,
     "ordem": 39,
-    "nome": "Esquina com a Rua Célso Sebastião",
+    "nome": "Antônio Destro × Célso Sebastião",
     "endereco": "135 R. Antônio Destro",
     "bairro": "Sonho Nosso I",
-    "lat": -22.4609828,
-    "lng": -48.5642422
+    "lat": -22.4678526,
+    "lng": -48.5619391,
+    "apelidos": [
+      "Esquina com a Rua Célso Sebastião"
+    ],
+    "referencia": "Em frente à casa do portão vermelho, de frente para a Rua Célso Sebastião.",
+    "fonteCoordenadas": "Confirmadas pelo responsável pelo BarraBus em 15/09/2026."
   },
   {
     "id": 40,
     "ordem": 40,
-    "nome": "Atrás do campinho",
+    "nome": "R. Erasmo Balde, 191",
     "endereco": "191 R. Erasmo Balde",
     "bairro": "Sonho Nosso I",
     "lat": -22.4687679,
-    "lng": -48.560438
+    "lng": -48.560438,
+    "apelidos": [
+      "Atrás do campinho"
+    ]
   },
   {
     "id": 41,
     "ordem": 41,
-    "nome": "Em frente a casa Nº 160",
+    "nome": "R. Júlio Guiraldello, 160",
     "endereco": "160 R. Júlio Guiraldello",
     "bairro": "Núcleo Habitacional",
     "lat": -22.4694253,
-    "lng": -48.5574296
+    "lng": -48.5574296,
+    "apelidos": [
+      "Em frente a casa Nº 160"
+    ]
   },
   {
     "id": 42,
     "ordem": 42,
-    "nome": "Em frente ao SADH",
+    "nome": "SADH",
     "endereco": "200 R. Dirce Manfrinato Romanin",
     "bairro": "Núcleo Habitacional",
     "lat": -22.4679933,
-    "lng": -48.5578317
+    "lng": -48.5578317,
+    "apelidos": [
+      "Em frente ao SADH"
+    ]
   },
   {
     "id": 43,
     "ordem": 43,
-    "nome": "Em frente a casa Nº 669",
+    "nome": "Leonardo de Águiar — em frente ao nº 669",
     "endereco": "678 R. Leonardo de Águiar",
     "bairro": "Núcleo Habitacional",
     "lat": -22.4665661,
-    "lng": -48.5590907
+    "lng": -48.5590907,
+    "apelidos": [
+      "Em frente a casa Nº 669"
+    ],
+    "referencia": "Casa nº 669; endereço cadastrado: R. Leonardo de Águiar, 678."
   },
   {
     "id": 44,
     "ordem": 44,
-    "nome": "Esquina com a Rua Jorge Pedrola",
+    "nome": "Leonardo de Águiar × Jorge Pedrola",
     "endereco": "531 R. Leonardo de Águiar",
     "bairro": "Sonho Nosso I",
     "lat": -22.4666527,
-    "lng": -48.5604775
+    "lng": -48.5604775,
+    "apelidos": [
+      "Esquina com a Rua Jorge Pedrola"
+    ]
   },
   {
     "id": 45,
@@ -389,64 +428,85 @@
   {
     "id": 46,
     "ordem": 46,
-    "nome": "Atrás da Igreja",
+    "nome": "R. Roberto Chiaratto, 500",
     "endereco": "500 R. Roberto Chiaratto",
     "bairro": "Conj. Res. Cel. Jose V. Franca III",
     "lat": -22.4646541,
-    "lng": -48.562289
+    "lng": -48.562289,
+    "apelidos": [
+      "Atrás da Igreja"
+    ]
   },
   {
     "id": 47,
     "ordem": 47,
-    "nome": "R. Mario Andréoli",
+    "nome": "R. Mário Andréoli, 245",
     "endereco": "245 R. Mario Andréoli",
     "bairro": "Sonho Nosso III",
     "lat": -22.4643277,
-    "lng": -48.5601245
+    "lng": -48.5601245,
+    "apelidos": [
+      "R. Mario Andréoli"
+    ]
   },
   {
     "id": 48,
     "ordem": 48,
-    "nome": "Bar ao lado do Hair Nail Studio",
+    "nome": "R. Mário Andréoli, 549",
     "endereco": "549 R. Mario Andréoli",
     "bairro": "Sonho Nosso V",
     "lat": -22.4617194,
-    "lng": -48.5602614
+    "lng": -48.5602614,
+    "apelidos": [
+      "Bar ao lado do Hair Nail Studio"
+    ]
   },
   {
     "id": 49,
     "ordem": 49,
-    "nome": "Parquinho Antigo",
+    "nome": "R. Domingos Miguel Ursini, 101",
     "endereco": "101 R. Domingos Miguel Ursini",
     "bairro": "Sonho Nosso V",
     "lat": -22.4603062,
-    "lng": -48.5609365
+    "lng": -48.5609365,
+    "apelidos": [
+      "Parquinho Antigo"
+    ]
   },
   {
     "id": 50,
     "ordem": 50,
-    "nome": "Atrás do Sesi",
+    "nome": "SESI — R. Avelino Bressanin",
     "endereco": "511 R. Avelino Bressanin",
     "bairro": "Sonho Nosso V",
     "lat": -22.4602597,
-    "lng": -48.5630862
+    "lng": -48.5630862,
+    "apelidos": [
+      "Atrás do Sesi"
+    ]
   },
   {
     "id": 51,
     "ordem": 51,
-    "nome": "Esquina com a Rua Sílvio Cestari",
+    "nome": "João Morelato × Sílvio Cestari",
     "endereco": "430 R. João Morelato",
     "bairro": "Sonho Nosso V",
     "lat": -22.4625873,
-    "lng": -48.5632562
+    "lng": -48.5632562,
+    "apelidos": [
+      "Esquina com a Rua Sílvio Cestari"
+    ]
   },
   {
     "id": 52,
     "ordem": 52,
-    "nome": "Esquina com a Rua Ângelo Biliassi",
+    "nome": "Armando Moretti × Ângelo Biliassi",
     "endereco": "271 R. Armando Moretti",
     "bairro": "Sonho Nosso V",
     "lat": -22.4622295,
-    "lng": -48.565426
+    "lng": -48.565426,
+    "apelidos": [
+      "Esquina com a Rua Ângelo Biliassi"
+    ]
   }
 ]

@@ -58,7 +58,9 @@ test('após 17:40 Igreja avança para a viagem seguinte sem afirmar presença',(
 });
 test('tabela completa, compacta, sem símbolos e sem avisos repetidos',()=>{
  const html=CircularUI.schedule(17,'uteis',true,date(5,0));
- for(const time of ['06:32','07:32','08:32','12:49','14:04','16:04','18:04','19:04'])assert.ok(html.includes(time));
+ // Coordenadas do ponto 39 corrigidas pelo responsável em 15/09/2026.
+ // A média por distância altera a cauda estimada em um minuto; relatos fixos permanecem iguais.
+ for(const time of ['06:32','07:32','08:32','12:50','14:05','16:05','18:05','19:05'])assert.ok(html.includes(time));
  assert.doesNotMatch(html,/≈|±|Cobertura parcial|ESTIMADO ENTRE|No ponto|Agora/);
 });
 test('outra seleção de dia não perde horários pelo relógio atual',()=>{

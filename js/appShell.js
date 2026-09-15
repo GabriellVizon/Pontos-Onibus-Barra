@@ -35,7 +35,7 @@
                         '<div class="footer-logo-icon"><i class="ti ti-bus"></i></div>' +
                         '<span>BarraBus</span>' +
                     '</div>' +
-                    '<p class="footer-desc">Simplificando o transporte público em Barra Bonita com dados precisos e tecnologia de ponta.</p>' +
+                    '<p class="footer-desc">Simplificando o transporte público em Barra Bonita com pontos, percursos e horários previstos.</p>' +
                 '</div>' +
                 '<div class="footer-links-group">' +
                     '<div class="footer-link-col">' +

@@ -2138,3 +2138,15 @@ select:focus-visible,
 .schedule-history[open] > summary { border-color:var(--red); }
 .schedule-history > .circular-times { margin:10px 0 0; }
 @media(max-width:400px) { .schedule-history > summary { gap:8px; padding:12px; } .history-show,.schedule-history[open] .history-hide { display:none; } }
+
+/* Release 1.0: optional location and selectable Plena stops. */
+.modal-location-help {display:flex;align-items:center;gap:12px;flex-wrap:wrap;color:var(--text-secondary,#aaa);font-size:12px;margin:-8px 0 18px;}
+.modal-location-help:empty {display:none;}
+.modal-location-help button {min-height:44px;padding:8px 12px;border:1px solid var(--border-color,#444);border-radius:8px;background:transparent;color:inherit;font:inherit;cursor:pointer;}
+.modal-location-help button:disabled {opacity:.6;cursor:wait;}
+button.route-stop-name {min-height:44px;padding:8px;border:1px solid var(--border-color,#444);border-radius:8px;background:transparent;color:inherit;cursor:pointer;font:inherit;}
+button.route-stop-name:hover,button.route-stop-name[aria-current] {border-color:#2196f3;background:rgba(33,150,243,.12);}
+.modal-location-help button:focus-visible,button.route-stop-name:focus-visible {outline:2px solid currentColor;outline-offset:3px;}
+.info-col-card > div {min-width:0;}
+
+button.route-stop-name {white-space:normal;overflow-wrap:anywhere;}

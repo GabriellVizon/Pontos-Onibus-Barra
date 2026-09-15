@@ -1682,3 +1682,7 @@ body {
         margin-top: 3px;
     }
 }
+/* Long names and unavailable distance must not squeeze card content. */
+.point-card-header {flex-wrap:wrap;}
+.point-card-title {flex:1 1 130px;min-width:0;}
+.point-distance {max-width:100%;white-space:normal;}

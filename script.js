@@ -47,6 +47,11 @@ async function init() {
   setupSearch();
   setupBackToTop();
   setupOfflineDetection();
+  observeLocationPermission(function(){
+    state.gpsDenied = true;
+    clearUserLocation();
+    setLocationStatus('Localização indisponível', 'Busca manual disponível', '--');
+  });
 
   if (!loadCache()) {
     renderSkeletons(els.favStops, 3);
@@ -69,6 +74,10 @@ async function init() {
     if (modalInited) return;
     modalInited = true;
     Modal.init({
+      resolvePoint: function(id){return state.pontos.find(function(p){return p.id===id;});},
+      getUserPosition: function(){return state.userPosition;},
+      requestLocation: requestUserLocation,
+      onPointSelected: selectStop,
       onFavToggle: function () {
         renderFavoriteStops();
         document.querySelectorAll('.fav-btn').forEach(function (btn) {
@@ -99,9 +108,7 @@ async function init() {
     await carregarDados();
     if (state.distanceCache) state.distanceCache.invalidate();
     saveCache(state.pontos, state.horarios);
-    if (typeof Favorites !== 'undefined') {
-      Favorites.pruneFavorites(state.pontos.map(function (p) { return p.id; }));
-    }
+    // A home carrega só a Circular; não pode remover favoritos de outras linhas.
     initModalOnce();
     renderAll();
     reperguntarLocalizacao();
@@ -271,7 +278,7 @@ function setupSearch() {
   });
 
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('.search-box')) {
+    if (!e.target.closest('.search-box, #searchMobileBtn')) {
       hideSearchSuggestions();
       toggleMobileSearch(false);
     }
@@ -293,7 +300,7 @@ function getSearchSuggestions(term) {
   return sortPointsByContext(
     lista.filter((ponto) => {
       return normalize([
-        ponto.nome,
+        ponto.nome, (ponto.apelidos || []).join(" "),
         ponto.endereco,
         ponto.bairro,
       ].join(' ')).includes(term);
@@ -574,6 +581,7 @@ function reperguntarLocalizacao(options = {}) {
       return;
     }
     // Navegador persistiu a recusa: mantém o estado e o banner sem chamada inútil.
+    clearUserLocation();
     state.gpsDenied = true;
     if (typeof setGpsDeniedPersisted === 'function') setGpsDeniedPersisted(true);
     setLocationStatus('Permissão negada', 'Libere pelo cadeado e tente novamente', '--');
@@ -581,8 +589,18 @@ function reperguntarLocalizacao(options = {}) {
   });
 }
 
+function clearUserLocation() {
+  state.userPosition = null;
+  if (state.userMarker) { state.userMarker.remove(); state.userMarker = null; }
+  if (state.distanceCache) state.distanceCache.invalidate();
+  renderNearbyStops();
+  renderFavoriteStops();
+  if (typeof Modal !== 'undefined') Modal.refreshLocation();
+}
+
 function requestUserLocation(options = {}) {
   if (!navigator.geolocation) {
+    clearUserLocation();
     setLocationStatus('GPS indisponível', 'Use a busca manual', '--');
     renderNearbyStops();
     return;
@@ -604,12 +622,15 @@ function requestUserLocation(options = {}) {
       renderNearbyStops();
       updateUserMarker();
       updateLocationSummary();
+      renderFavoriteStops();
+      Modal.refreshLocation();
 
       if (options.scrollToNearby) {
         document.getElementById('pontos')?.scrollIntoView({ behavior: 'smooth' });
       }
     },
     (error) => {
+      clearUserLocation();
       if (state.distanceCache) state.distanceCache.invalidate();
       state.gpsDenied = error.code === error.PERMISSION_DENIED;
       if (typeof setGpsDeniedPersisted === 'function') setGpsDeniedPersisted(state.gpsDenied);

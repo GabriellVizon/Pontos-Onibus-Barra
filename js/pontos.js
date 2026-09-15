@@ -23,6 +23,7 @@
         scheduleLinha: 'circular',
         scheduleSentidoPlena: null,
         scheduleDiaTab: getCurrentDayType(),
+        scheduleFollowsToday: true,
         linhasDoPonto: []
     };
 
@@ -85,6 +86,11 @@
             });
         }
         setInterval(refreshLiveDepartures, 30000);
+        observeLocationPermission(function(){
+            state.gpsDenied = true;
+            clearUserLocation();
+            if (els.locationStatus) els.locationStatus.textContent = 'GPS INDISPONÍVEL';
+        });
         setInterval(verificarPermissaoLocalizacao, 5 * 60 * 1000);
 
         var cached = loadCache();
@@ -93,6 +99,10 @@
             if (modalInited) return;
             modalInited = true;
             Modal.init({
+                resolvePoint: function(id,line){return (line==='plena'?state.pontosPlena:state.pontos).find(function(p){return p.id===id;});},
+                getUserPosition: function(){return state.userPosition;},
+                requestLocation: requestLocation,
+                onPointSelected: function(id){selectPoint(id,true);},
                 onFavToggle: function () {
                     render();
                     renderPlena();
@@ -149,7 +159,7 @@
                 verificarPermissaoLocalizacao();
             } else {
                 if (els.pointsGrid) {
-                    els.pointsGrid.innerHTML = '<div class="empty-state">Não foi possível carregar os pontos. Abra a página por um servidor local para o fetch funcionar.</div>';
+                    els.pointsGrid.innerHTML = '<div class="empty-state">Não foi possível carregar os pontos. Verifique sua conexão e tente atualizar a página.</div>';
                 }
                 if (els.pageSubtitle) els.pageSubtitle.textContent = 'Erro ao carregar os dados dos pontos.';
             }
@@ -189,7 +199,7 @@
             if (state.distanceCachePlena) state.distanceCachePlena.invalidate();
             saveCache(state.pontos, state.horarios);
 
-            if (typeof Favorites !== 'undefined') {
+            if (typeof Favorites !== 'undefined' && state.pontosPlena.length && state.pontos.length) {
                 var allIds = state.pontos.map(function (p) { return p.id; })
                     .concat(state.pontosPlena.map(function (p) { return p.id; }));
                 Favorites.pruneFavorites(allIds);
@@ -251,7 +261,7 @@
         setupMobileSearchDismiss();
 
         document.addEventListener('click', function (event) {
-            if (!event.target.closest('.search-box')) {
+            if (!event.target.closest('.search-box, #searchMobileBtn')) {
                 hideSearchSuggestions();
                 toggleMobileSearch(false);
             }
@@ -421,7 +431,7 @@
         }
 
         var results = getAllPointsWithLinha().filter(function (ponto) {
-            return normalize([ponto.nome, ponto.endereco, ponto.bairro].join(' ')).includes(term);
+            return normalize([ponto.nome, ponto.endereco, ponto.bairro, (ponto.apelidos || []).join(" ")].join(' ')).includes(term);
         }).slice(0, 10);
 
         renderSuggestionsList(results);
@@ -433,8 +443,20 @@
         els.searchResults.innerHTML = '';
     }
 
+    function clearUserLocation() {
+        state.userPosition = null;
+        if (state.userMarker) { state.userMarker.remove(); state.userMarker = null; }
+        if (state.distanceCache) state.distanceCache.invalidate();
+        if (state.distanceCachePlena) state.distanceCachePlena.invalidate();
+        render();
+        renderPlena();
+        if (typeof Modal !== 'undefined') Modal.refreshLocation();
+        if (els.selectedDistance && state.selectedPointId) els.selectedDistance.textContent = 'Distância indisponível';
+    }
+
     function requestLocation() {
         if (!navigator.geolocation) {
+            clearUserLocation();
             if (els.locationStatus) els.locationStatus.textContent = 'SEM GPS';
             return;
         }
@@ -454,9 +476,15 @@
                 updateUserMarker();
                 render();
                 renderPlena();
-                selectNearestPoint();
+                if (!state.selectedPointId) selectNearestPoint();
+                Modal.refreshLocation();
+                if (state.selectedPointId && els.selectedDistance) {
+                    var selected = state.pontos.concat(state.pontosPlena).find(function(p){return p.id===state.selectedPointId;});
+                    if(selected) els.selectedDistance.textContent = getDistanceText(selected, state.pontosPlena.includes(selected)?'plena':'circular');
+                }
             },
             function (error) {
+                clearUserLocation();
                 if (state.distanceCache) state.distanceCache.invalidate();
                 if (state.distanceCachePlena) state.distanceCachePlena.invalidate();
                 state.gpsDenied = error && error.code === error.PERMISSION_DENIED;
@@ -477,6 +505,7 @@
                 requestLocation();
                 return;
             }
+            clearUserLocation();
             state.gpsDenied = true;
             if (typeof setGpsDeniedPersisted === 'function') setGpsDeniedPersisted(true);
             if (els.locationStatus) els.locationStatus.textContent = 'GPS NEGADO';
@@ -568,7 +597,7 @@
 
         if (term) {
             lista = lista.filter(function (ponto) {
-                return normalize([ponto.nome, ponto.endereco, ponto.bairro].join(' ')).includes(term);
+                return normalize([ponto.nome, ponto.endereco, ponto.bairro, (ponto.apelidos || []).join(" ")].join(' ')).includes(term);
             });
         }
 
@@ -591,7 +620,7 @@
             if (resultado.encontrado) {
                 var minRest = resultado.minutosRestantes;
                 var label;
-                if (resultado.estado === 'chegando') label = 'Agora';
+                if (resultado.estado === 'chegando') label = 'Previsto agora';
                 else if (minRest < 60) label = minRest + ' min';
                 else {
                     var h = Math.floor(minRest / 60);
@@ -641,7 +670,7 @@
             '</div>',
             '<p class="point-address">' + escapeHtml(ponto.endereco) + '</p>',
             '<div class="point-next-bus" style="border-left:3px solid ' + dotColor + '">',
-            '<span class="point-next-label"><i class="ti ti-bus" style="color:' + dotColor + '"></i> ' + (linha === 'circular' ? 'Próximo horário' : 'Próximo ônibus') + '</span>',
+            '<span class="point-next-label"><i class="ti ti-bus" style="color:' + dotColor + '"></i> ' + (linha === 'circular' ? 'Próximo horário' : 'Próximo horário') + '</span>',
             '<span class="point-next-time ' + nextClass + '">' + escapeHtml(next.label) + '</span>',
             '</div>',
             '<div class="point-meta">',
@@ -652,6 +681,7 @@
     }
 
     function getDistanceText(ponto, linha) {
+        if (!state.userPosition) return 'Distância indisponível';
         var cache = linha === 'plena' ? state.distanceCachePlena : state.distanceCache;
         var withDist = (cache && ponto) ? cache.forSingle(ponto) : ponto;
         if (!withDist || withDist.distancia === undefined) {
@@ -661,7 +691,7 @@
         if (typeof withDist.distancia === 'number') {
             return formatDistance(withDist.distancia);
         }
-        return hasCoords(ponto) ? 'Com GPS' : 'Sem GPS';
+        return 'Distância indisponível';
     }
 
     /* ========================================
@@ -691,7 +721,7 @@
             if (res && res.encontrado) {
                 var minR = res.minutosRestantes;
                 var lbl;
-                if (res.estado === 'chegando') lbl = 'Agora';
+                if (res.estado === 'chegando') lbl = 'Previsto agora';
                 else if (minR < 60) lbl = minR + ' min';
                 else {
                     var hh = Math.floor(minR / 60);
@@ -779,6 +809,7 @@
         state.linhasDoPonto = linhas;
         state.scheduleLinha = linhas.length === 1 ? linhas[0] : 'circular';
         state.scheduleDiaTab = getCurrentDayType();
+        state.scheduleFollowsToday = true;
 
         if (state.scheduleLinha === 'plena') {
             var sentidos = typeof obterSentidosPlena === 'function' ? obterSentidosPlena(ponto.id) : [];
@@ -806,6 +837,7 @@
         state.selectedPointId = null;
         state.scheduleLinha = 'circular';
         state.scheduleDiaTab = getCurrentDayType();
+        state.scheduleFollowsToday = true;
         state.scheduleSentidoPlena = null;
         if (els.selectedPointName) els.selectedPointName.textContent = 'Nenhum ponto selecionado';
         if (els.selectedDistance) els.selectedDistance.textContent = 'Aguardando localização';
@@ -1005,15 +1037,13 @@
             els.nearbyPriorityGrid.style.setProperty('--nearby-columns', '1');
             var gpsMsg = state.gpsDenied
                 ? gpsDeniedHelp()
-                : 'Permita a localização para ordenar e selecionar automaticamente o ponto mais próximo.';
+                : 'Você pode pesquisar pontos e consultar horários. Ative a localização para ver as distâncias.';
             els.nearbyPriorityGrid.innerHTML = '<div class="nearby-priority-empty"><i class="ti ti-location"></i><span>' + escapeHtml(gpsMsg) + '</span></div>';
-            if (els.nearbyPriorityStatus) els.nearbyPriorityStatus.textContent = state.gpsDenied ? 'GPS negado' : 'Aguardando GPS';
+            if (els.nearbyPriorityStatus) els.nearbyPriorityStatus.textContent = state.gpsDenied ? 'GPS negado' : 'Localização indisponível';
             if (els.nearbyPriorityActions) {
-                els.nearbyPriorityActions.innerHTML = state.gpsDenied
-                    ? '<button type="button" class="nearby-toggle-btn" id="nearbyGpsRetry"><i class="ti ti-refresh"></i>Tentar novamente</button>'
-                    : '';
+                els.nearbyPriorityActions.innerHTML = '<button type="button" class="nearby-toggle-btn" id="nearbyGpsRetry"><i class="ti ti-refresh"></i>Tentar novamente</button>';
                 var retry = els.nearbyPriorityActions.querySelector('#nearbyGpsRetry');
-                if (retry) retry.addEventListener('click', function () { verificarPermissaoLocalizacao(); });
+                if (retry) retry.addEventListener('click', function () { requestLocation(); });
             }
             return;
         }
@@ -1063,7 +1093,7 @@
                 if (res.encontrado) {
                     var minR = res.minutosRestantes;
                     var lbl;
-                    if (res.estado === 'chegando') lbl = 'Agora';
+                    if (res.estado === 'chegando') lbl = 'Previsto agora';
                     else if (minR < 60) lbl = minR + ' min';
                     else {
                         var h = Math.floor(minR / 60);
@@ -1092,7 +1122,7 @@
                         var pParts = proximo.split(':');
                         var pMin = parseInt(pParts[0], 10) * 60 + parseInt(pParts[1], 10);
                         var diff = pMin - agoraMin;
-                        var lbl2 = diff <= 1 ? 'Agora' : diff < 60 ? diff + ' min' : Math.floor(diff / 60) + 'h';
+                        var lbl2 = diff <= 1 ? 'Previsto agora' : diff < 60 ? diff + ' min' : Math.floor(diff / 60) + 'h';
                         return { time: proximo, label: lbl2, minutes: diff };
                     }
                     return { time: '--', label: 'Encerrado', minutes: Infinity };
@@ -1186,6 +1216,7 @@
                 }
 
                 state.scheduleDiaTab = getCurrentDayType();
+        state.scheduleFollowsToday = true;
                 renderScheduleCard();
             });
         });
@@ -1225,6 +1256,7 @@
             btn.addEventListener('click', function () {
                 state.scheduleSentidoPlena = this.getAttribute('data-sentido');
                 state.scheduleDiaTab = getCurrentDayType();
+        state.scheduleFollowsToday = true;
                 renderScheduleCard();
             });
         });
@@ -1241,7 +1273,7 @@
             }).join('') + '</div><div class="circular-schedule-body">' + CircularUI.schedule(state.selectedPointId, state.scheduleDiaTab, state.scheduleExpanded) + '</div>';
             container.innerHTML = htmlCircular;
             var details = container.querySelector('details'); if (details && wasOpen) details.open = true;
-            container.querySelectorAll('[data-dia]').forEach(function (btn) { btn.addEventListener('click', function () { state.scheduleDiaTab = btn.dataset.dia; state.scheduleExpanded = false; renderScheduleCard(); }); });
+            container.querySelectorAll('[data-dia]').forEach(function (btn) { btn.addEventListener('click', function () { state.scheduleFollowsToday = false; state.scheduleDiaTab = btn.dataset.dia; state.scheduleExpanded = false; renderScheduleCard(); }); });
             var expand = container.querySelector('#scheduleFutureToggle');
             if (expand) expand.addEventListener('click', function () { state.scheduleExpanded = !state.scheduleExpanded; renderScheduleTable(); });
             return;
@@ -1275,8 +1307,8 @@
             var now=new Date(), nowMinutes=now.getHours()*60+now.getMinutes(), passed=[], future=[];
             horarios.forEach(function(t){var m=timeToMinutes(t);if(m!==null&&m<nowMinutes)passed.push(t);else future.push(t);});
             var current=future.length?future[0]:null, visible=state.scheduleExpanded?future:future.slice(0,6), hidden=Math.max(0,future.length-6);
-            html+='<div class="schedule-legend"><span><i class="legend-dot passed"></i>Passou</span><span><i class="legend-dot current"></i>Próximo</span><span><i class="legend-dot upcoming"></i>Mais tarde</span></div>';
-            if(visible.length){html+='<div class="schedule-timeline">';visible.forEach(function(t){var active=t===current,diff=Math.max(0,timeToMinutes(t)-nowMinutes);html+='<div class="schedule-time-card '+(active?'current':'upcoming')+'"><span class="schedule-status">'+(active?'Próximo ônibus':'Mais tarde')+'</span><strong class="schedule-time">'+escapeHtml(t)+'</strong>'+(active?'<span class="schedule-countdown">'+(diff<=1?'Agora':diff+' min')+'</span>':'')+'</div>';});html+='</div>';}
+            html+='<div class="schedule-legend"><span><i class="legend-dot passed"></i>Horários anteriores</span><span><i class="legend-dot current"></i>Próximo</span><span><i class="legend-dot upcoming"></i>Mais tarde</span></div>';
+            if(visible.length){html+='<div class="schedule-timeline">';visible.forEach(function(t){var active=t===current,diff=Math.max(0,timeToMinutes(t)-nowMinutes);html+='<div class="schedule-time-card '+(active?'current':'upcoming')+'"><span class="schedule-status">'+(active?'Próximo horário':'Mais tarde')+'</span><strong class="schedule-time">'+escapeHtml(t)+'</strong>'+(active?'<span class="schedule-countdown">'+(diff<=1?'Previsto agora':diff+' min')+'</span>':'')+'</div>';});html+='</div>';}
             else html+='<div class="schedule-empty-msg schedule-ended"><i class="ti ti-moon-stars"></i><strong>Operação encerrada hoje</strong><span>Consulte outro dia nas abas acima.</span></div>';
             html+='<div class="schedule-actions">';
             if(future.length>6)html+='<button type="button" class="schedule-toggle-btn" id="scheduleFutureToggle"><i class="ti ti-'+(state.scheduleExpanded?'minus':'plus')+'"></i>'+(state.scheduleExpanded?'Mostrar menos horários':'Ver mais '+hidden+' horários')+'</button>';
@@ -1284,7 +1316,7 @@
             html+='</div>';
         }
         container.innerHTML=html;
-        container.querySelectorAll('.schedule-day-tab').forEach(function(tab){tab.addEventListener('click',function(){state.scheduleDiaTab=this.dataset.dia;state.scheduleExpanded=false;renderScheduleCard(null);});});
+        container.querySelectorAll('.schedule-day-tab').forEach(function(tab){tab.addEventListener('click',function(){state.scheduleFollowsToday=false;state.scheduleDiaTab=this.dataset.dia;state.scheduleExpanded=false;renderScheduleCard(null);});});
         var toggle=container.querySelector('#scheduleFutureToggle');if(toggle)toggle.addEventListener('click',function(){state.scheduleExpanded=!state.scheduleExpanded;renderScheduleCard(null);});
     }
 
@@ -1308,7 +1340,7 @@
 
         if (term) {
             lista = lista.filter(function (ponto) {
-                return normalize([ponto.nome, ponto.endereco, ponto.bairro].join(' ')).includes(term);
+                return normalize([ponto.nome, ponto.endereco, ponto.bairro, (ponto.apelidos || []).join(" ")].join(' ')).includes(term);
             });
         }
 
@@ -1346,6 +1378,10 @@
     }
 
     function refreshLiveDepartures() {
+        if (state.scheduleFollowsToday && state.scheduleDiaTab !== getCurrentDayType()) {
+            state.scheduleDiaTab = getCurrentDayType();
+            renderScheduleCard();
+        }
         if (typeof CONFIG_HORARIOS === 'undefined' && state.scheduleLinha !== 'plena') return;
 
         if (state.scheduleLinha === 'circular') {
@@ -1386,7 +1422,7 @@
                     if (res && res.encontrado) {
                         if (timeEl) {
                             timeEl.textContent = res.estado === 'chegando'
-                                ? 'Agora'
+                                ? 'Previsto agora'
                                 : res.minutosRestantes + ' min';
                             timeEl.className = 'point-next-time ' + (res.minutosRestantes <= 5 ? 'now' : 'waiting');
                         }

@@ -6,7 +6,7 @@
     {id:'ultima',rota:'A',ref:'08:15',nome:'Última volta',nota:'Esta volta termina na Rodoviária.'},
     {id:'tarde',rota:'B',ref:'17:15',nome:'Tarde',nota:'Sai da Rodoviária e retorna à Rodoviária.'}
   ];
-  function mount(el, data, saved) {
+  function mount(el, data, saved, onSelect) {
     var state=saved||{},pointId=Number(data.ponto.id);
     var canonical=CONFIG_HORARIOS.correspondencias[pointId]||pointId;
     if(!state.variant)state.variant=(canonical===13||canonical===12)?'primeira':new Date().getHours()<12?'circuito':'tarde';
@@ -38,11 +38,12 @@
       listen('routeMorning','click',function(){state.variant=canonical===13||canonical===12?'primeira':'circuito';render('routeMorning',true);});
       listen('routeAfternoon','click',function(){state.variant='tarde';render('routeAfternoon',true);});
       listen('routeVariant','change',function(e){state.variant=e.target.value;render('routeVariant',true);});
-      listen('routeJump','change',function(e){state.index=Number(e.target.value);render('routeJump');});
+      function choose(index){state.index=index;if(onSelect){onSelect(seq[index]);var jump=el.querySelector('#routeJump');if(jump)jump.focus({preventScroll:true});}else render('routeJump');}
+      listen('routeJump','change',function(e){choose(Number(e.target.value));});
       listen('routePrevious','click',function(){state.index--;render('routePrevious');});
       listen('routeNext','click',function(){state.index++;render('routeNext');});
       listen('routeReturn','click',function(){state.index=matches[0];render('routeReturn');});
-      el.querySelectorAll('[data-route-index]').forEach(function(b){b.addEventListener('click',function(){state.index=Number(b.dataset.routeIndex);render('routeJump');});});
+      el.querySelectorAll('[data-route-index]').forEach(function(b){b.addEventListener('click',function(){choose(Number(b.dataset.routeIndex));});});
       // Troca de período preserva o foco no controle; nos extremos, usa o seletor.
       if(focusId){var target=el.querySelector('#'+focusId);if(target&&target.disabled)target=el.querySelector('#routeJump');if(target)target.focus({preventScroll:true});}
     }
