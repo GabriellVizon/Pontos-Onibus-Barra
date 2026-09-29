@@ -2150,3 +2150,80 @@ button.route-stop-name:hover,button.route-stop-name[aria-current] {border-color:
 .info-col-card > div {min-width:0;}
 
 button.route-stop-name {white-space:normal;overflow-wrap:anywhere;}
+
+/* ===================== PLENA CONSISTENCY / LOCATION STATUS ===================== */
+.home-card-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.home-card-title-row .card-title { margin-bottom: 4px; }
+.home-line-tag {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 3px 7px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .06em;
+}
+.home-line-tag.plena {
+    color: var(--blue-light);
+    background: rgba(33, 150, 243, .12);
+    border: 1px solid rgba(33, 150, 243, .28);
+}
+.location-pending {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    align-self: flex-start;
+    margin: -3px 0 10px;
+    color: var(--text-muted);
+    font-size: 10px;
+    line-height: 1.4;
+}
+.location-pending i { color: var(--blue); font-size: 13px; }
+.stop-card.plena-card:hover,
+.stop-card.plena-card.selected {
+    border-color: rgba(33, 150, 243, .72);
+    box-shadow: 0 0 0 1px rgba(33, 150, 243, .2), 0 8px 28px rgba(0, 0, 0, .22);
+}
+.stop-card.plena-card .card-icon {
+    background: rgba(33, 150, 243, .12);
+}
+.stop-card.plena-card .card-icon i,
+.stop-card.plena-card .card-distance,
+.stop-card.plena-card .card-next-label i {
+    color: var(--blue);
+}
+.stop-card.plena-card .card-next-bus {
+    border-color: rgba(33, 150, 243, .2);
+    background: rgba(33, 150, 243, .07);
+}
+.stop-card.plena-card .card-next-time.waiting { color: var(--blue-light); }
+.stop-card.plena-card .time-chip.active { background: var(--blue); }
+.stop-card.plena-card .card-action:hover {
+    border-color: var(--blue);
+    background: rgba(33, 150, 243, .1);
+}
+
+/* A Plena usa a mesma linguagem visual dos horários da Circular, mudando só a cor da linha. */
+.plena-schedule-label { margin-top: 14px; }
+.plena-schedule-label .schedule-dot { background: var(--blue); }
+.plena-times .circular-time.is-next { border-color: var(--blue); }
+.plena-times .circular-time.is-next strong,
+.plena-times .circular-time.is-next .circular-time-caption { color: var(--blue-light); }
+.plena-history > summary:hover,
+.plena-history[open] > summary { border-color: var(--blue); }
+.plena-history > summary:focus-visible { outline-color: var(--blue); }
+.plena-toggle i { background: var(--blue); }
+.modal-overlay.plena-theme .schedule-history > summary:hover,
+.modal-overlay.plena-theme .schedule-history[open] > summary { border-color: var(--blue); }
+.modal-overlay.plena-theme .schedule-history > summary:focus-visible { outline-color: var(--blue); }
+
+@media (max-width: 480px) {
+    .home-card-title-row { align-items: flex-start; }
+    .home-line-tag { margin-top: 1px; }
+}

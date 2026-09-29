@@ -294,6 +294,9 @@
 
   function computeNextForModal() {
     if (modalState.linhaSelecionada === 'plena') {
+      if (modalState.diaTabPlena !== getCurrentDayType()) {
+        return { time: '--', label: 'Consultando outro dia', minutes: Infinity };
+      }
       if (typeof encontrarPassagensPlena === 'function' && modalState.sentidoPlena) {
         var res = encontrarPassagensPlena(
           currentData.ponto.id,
@@ -506,17 +509,22 @@
   function renderInfoRow(data) {
     var el = modalEl.querySelector('#modalInfoRow');
     var ponto = data.ponto;
-    var dText = data.distancia != null ? formatDistance(data.distancia) : 'Distância indisponível';
+    var locationPending = modalState.linhaSelecionada === 'plena' && ponto.localizacaoConfirmada === false;
+    var dText = locationPending ? 'Referência aproximada' : (data.distancia != null ? formatDistance(data.distancia) : 'Distância indisponível');
 
     var html = '';
     if (dText) {
-      html += '<div class="info-col-card"><i class="ti ti-north-star"></i><div><p class="info-col-label">Dist&acirc;ncia</p><p class="info-col-value">' + escapeHtml(dText) + '</p></div></div>';
+      html += '<div class="info-col-card"><i class="ti ti-north-star"></i><div><p class="info-col-label">' + (locationPending ? 'Localização' : 'Dist&acirc;ncia') + '</p><p class="info-col-value">' + escapeHtml(dText) + '</p></div></div>';
     }
     html += '<div class="info-col-card"><i class="ti ti-home"></i><div><p class="info-col-label">Bairro</p><p class="info-col-value">' + escapeHtml(ponto.bairro || '—') + '</p></div></div>';
     el.innerHTML = html;
     var help = modalEl.querySelector('#modalLocationHelp');
-    help.innerHTML = data.userPosition ? '' : '<span>Ative sua localização para ver a distância até este ponto.</span>' +
-      (context.requestLocation ? '<button type="button" id="modalRetryLocation">Tentar novamente</button>' : '');
+    if (locationPending) {
+      help.innerHTML = '<span>O local exato deste embarque da Plena ainda não foi confirmado. O marcador serve apenas como referência aproximada.</span>';
+    } else {
+      help.innerHTML = data.userPosition ? '' : '<span>Ative sua localização para ver a distância até este ponto.</span>' +
+        (context.requestLocation ? '<button type="button" id="modalRetryLocation">Tentar novamente</button>' : '');
+    }
     var retry = help.querySelector('button');
     if (retry) retry.addEventListener('click', function(){
       retry.disabled = true;
@@ -529,12 +537,13 @@
     var el = modalEl.querySelector('#modalActions');
     var ponto = data.ponto;
     var validCoords = hasCoords(ponto);
+    var locationPending = modalState.linhaSelecionada === 'plena' && ponto.localizacaoConfirmada === false;
     var routeUrl = validCoords ? 'https://www.google.com/maps/dir/?api=1&destination=' + ponto.lat + ',' + ponto.lng : null;
-    if (routeUrl && data.userPosition) routeUrl += '&origin=' + data.userPosition.lat + ',' + data.userPosition.lng + '&travelmode=walking';
+    if (routeUrl && data.userPosition && !locationPending) routeUrl += '&origin=' + data.userPosition.lat + ',' + data.userPosition.lng + '&travelmode=walking';
 
     el.innerHTML =
-      (validCoords ? '<button class="action-btn action-btn-red" id="modalActionMap"><i class="ti ti-map"></i> Ver mapa</button>' : '') +
-      (routeUrl ? '<a id="modalActionDirections" class="action-btn action-btn-outline" href="' + routeUrl + '" target="_blank" rel="noopener"><i class="ti ti-north-star"></i> ' + (data.userPosition ? 'Traçar rota' : 'Abrir no Maps') + '</a>' : '') +
+      (validCoords ? '<button class="action-btn action-btn-red" id="modalActionMap"><i class="ti ti-map"></i> ' + (locationPending ? 'Ver referência' : 'Ver mapa') + '</button>' : '') +
+      (routeUrl ? '<a id="modalActionDirections" class="action-btn action-btn-outline" href="' + routeUrl + '" target="_blank" rel="noopener"><i class="ti ti-north-star"></i> ' + (locationPending ? 'Abrir referência no Maps' : (data.userPosition ? 'Traçar rota' : 'Abrir no Maps')) + '</a>' : '') +
       '<button class="action-btn action-btn-icon" id="modalActionShare" aria-label="Compartilhar ponto"><i class="ti ti-share"></i></button>';
 
     var mapBtn = modalEl.querySelector('#modalActionMap');
@@ -657,7 +666,9 @@
     var details = el.querySelector('details'); if (details && opened) details.open = true;
   }
 
-    function renderSchedulePlena(el, data) {
+  function renderSchedulePlena(el, data) {
+    var oldDetails = el.querySelector('details');
+    var wasOpen = oldDetails && oldDetails.open;
     var html = '';
 
     if (modalState.sentidosPlena.length > 1) {
@@ -680,28 +691,47 @@
 
     var horarios = obterHorariosPlena(modalState.sentidoPlena, modalState.diaTabPlena, data.ponto.id);
     var sentido = modalState.sentidosPlena.find(function (s) { return s.id === modalState.sentidoPlena; });
-    var dotColor = '#2196f3';
+
+    if (sentido) {
+      html += '<div class="schedule-line-label plena-schedule-label"><span class="schedule-dot"></span>' + escapeHtml(sentido.nome) + '</div>';
+    }
 
     if (horarios.length === 0) {
-      html += '<p class="tab-empty">Nenhum horário disponível para este sentido e dia.</p>';
+      html += '<p class="circular-notice">Nenhum horário disponível para este sentido e dia.</p>';
     } else {
-      var next = computeNextForModal();
-      var nextTime = next ? next.time : null;
-      var times = horarios.map(function (t) {
-        var cls = t === nextTime ? ' modal-time-active' : '';
-        return '<span class="modal-time' + cls + '">' + escapeHtml(t) + '</span>';
-      }).join('');
+      var now = new Date();
+      var isToday = modalState.diaTabPlena === getCurrentDayType();
+      var nowMinutes = now.getHours() * 60 + now.getMinutes();
+      var passed = isToday ? horarios.filter(function (t) { return timeToMinutes(t) < nowMinutes; }) : [];
+      var future = isToday ? horarios.filter(function (t) { return timeToMinutes(t) >= nowMinutes; }) : horarios.slice();
+      var nextTime = isToday && future.length ? future[0] : null;
 
-      html +=
-        '<div class="schedule-group">' +
-          '<div class="schedule-line-label"><span class="schedule-dot" style="background:' + dotColor + '"></span>' +
-          escapeHtml(sentido ? sentido.nome : 'Plena') +
-          '</div>' +
-          '<div class="modal-times-grid">' + times + '</div>' +
-        '</div>';
+      if (future.length) {
+        html += '<div class="circular-times plena-times">' + future.map(function (t) {
+          var isNext = t === nextTime;
+          return '<div class="circular-time plena-time' + (isNext ? ' is-next' : '') + '">' +
+            '<span class="circular-time-caption">' + (isNext ? 'Próximo' : (isToday ? 'Mais tarde' : 'Horário')) + '</span>' +
+            '<strong>' + escapeHtml(t) + '</strong>' +
+          '</div>';
+        }).join('') + '</div>';
+      } else {
+        html += '<p class="circular-notice">Não há mais horários da Plena previstos para hoje.</p>';
+      }
+
+      if (passed.length) {
+        html += '<details class="passed-details schedule-history plena-history"><summary>' +
+          '<svg class="history-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2.6 7M3 5v6h6M12 7v5l3 2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+          '<span class="history-title">Horários anteriores</span><span class="history-count">' + passed.length + '</span>' +
+          '<span class="history-action" aria-hidden="true"><span class="history-show">Ver</span><span class="history-hide">Ocultar</span><span class="history-chevron"></span></span>' +
+          '</summary><div class="circular-times plena-times">' + passed.map(function (t) {
+            return '<div class="circular-time plena-time"><span class="circular-time-caption">Anterior</span><strong>' + escapeHtml(t) + '</strong></div>';
+          }).join('') + '</div></details>';
+      }
     }
 
     el.innerHTML = html;
+    var details = el.querySelector('details');
+    if (details && wasOpen) details.open = true;
 
     el.querySelectorAll('.direction-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -725,11 +755,6 @@
     el.querySelectorAll('.day-tab').forEach(function (btn) {
       btn.addEventListener('click', function () {
         modalState.diaTabPlena = this.getAttribute('data-dia');
-
-        el.querySelectorAll('.day-tab').forEach(function (t) {
-          t.classList.toggle('active', t.getAttribute('data-dia') === modalState.diaTabPlena);
-        });
-
         var fresh = Object.assign({}, data, { next: computeNextForModal() });
         renderNextBus(fresh);
         renderSchedulePlena(el, fresh);

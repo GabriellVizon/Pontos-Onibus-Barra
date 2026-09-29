@@ -3,36 +3,44 @@
     "id": 101,
     "ordem": 1,
     "nome": "Barra Bonita",
-    "endereco": "Ponto de embarque central",
+    "endereco": "Localização exata ainda não informada",
     "bairro": "Centro",
     "lat": -22.4893,
-    "lng": -48.5584
+    "lng": -48.5584,
+    "referencia": "Referência aproximada no mapa; confirmar o local exato de embarque.",
+    "localizacaoConfirmada": false
   },
   {
     "id": 102,
     "ordem": 2,
     "nome": "COHAB Barra Bonita",
-    "endereco": "Ponto de embarque COHAB",
+    "endereco": "Localização exata ainda não informada",
     "bairro": "Cohab",
     "lat": -22.4732,
-    "lng": -48.5664
+    "lng": -48.5664,
+    "referencia": "Referência aproximada no mapa; confirmar o local exato de embarque.",
+    "localizacaoConfirmada": false
   },
   {
     "id": 103,
     "ordem": 3,
     "nome": "Igaraçu do Tietê",
-    "endereco": "Ponto de embarque central",
+    "endereco": "Localização exata ainda não informada",
     "bairro": "Centro",
     "lat": -22.5106,
-    "lng": -48.5577
+    "lng": -48.5577,
+    "referencia": "Referência aproximada no mapa; confirmar o local exato de embarque.",
+    "localizacaoConfirmada": false
   },
   {
     "id": 104,
     "ordem": 4,
     "nome": "COHAB Igaraçu do Tietê",
-    "endereco": "Ponto de embarque COHAB",
+    "endereco": "Localização exata ainda não informada",
     "bairro": "Cohab",
     "lat": -22.5048,
-    "lng": -48.5605
+    "lng": -48.5605,
+    "referencia": "Referência aproximada no mapa; confirmar o local exato de embarque.",
+    "localizacaoConfirmada": false
   }
 ]

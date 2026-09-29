@@ -2,7 +2,9 @@ const BARRA_BONITA_CENTER = [-22.4946, -48.5588];
 
 const state = {
   pontos: [],
+  pontosPlena: [],
   horarios: [],
+  horariosPlena: null,
   userPosition: null,
   gpsDenied: (typeof getGpsDeniedPersisted === 'function') ? getGpsDeniedPersisted() : false,
   selectedStopId: null,
@@ -11,6 +13,7 @@ const state = {
   userMarker: null,
   markers: new Map(),
   distanceCache: null,
+  distanceCachePlena: null,
 };
 
 const els = {
@@ -38,6 +41,10 @@ document.addEventListener('DOMContentLoaded', init);
 async function init() {
   state.distanceCache = createDistanceCache(
     function () { return state.pontos; },
+    function () { return state.userPosition; }
+  );
+  state.distanceCachePlena = createDistanceCache(
+    function () { return state.pontosPlena; },
     function () { return state.userPosition; }
   );
   setupNavigation();
@@ -74,7 +81,10 @@ async function init() {
     if (modalInited) return;
     modalInited = true;
     Modal.init({
-      resolvePoint: function(id){return state.pontos.find(function(p){return p.id===id;});},
+      resolvePoint: function(id, line){
+        var source = line === 'plena' ? state.pontosPlena : state.pontos;
+        return source.find(function(p){return p.id===id;});
+      },
       getUserPosition: function(){return state.userPosition;},
       requestLocation: requestUserLocation,
       onPointSelected: selectStop,
@@ -97,18 +107,22 @@ async function init() {
 
   try {
     if (cached) {
-      state.pontos = cached.pontos;
-      state.horarios = cached.horarios;
+      state.pontos = cached.pontos || [];
+      state.horarios = cached.horarios || [];
+      state.pontosPlena = Array.isArray(cached.pontosPlena) ? cached.pontosPlena : [];
+      state.horariosPlena = cached.horariosPlena || null;
       if (typeof setPontosCircular === 'function') setPontosCircular(state.pontos);
+      if (state.horariosPlena && typeof carregarConfigPlena === 'function') carregarConfigPlena(state.horariosPlena);
       if (state.distanceCache) state.distanceCache.invalidate();
+      if (state.distanceCachePlena) state.distanceCachePlena.invalidate();
       initModalOnce();
       renderAll();
       hideSplash();
     }
     await carregarDados();
     if (state.distanceCache) state.distanceCache.invalidate();
-    saveCache(state.pontos, state.horarios);
-    // A home carrega só a Circular; não pode remover favoritos de outras linhas.
+    saveCache(state.pontos, state.horarios, state.pontosPlena, state.horariosPlena);
+    // A Home trabalha com Circular e Plena sem remover favoritos entre linhas.
     initModalOnce();
     renderAll();
     reperguntarLocalizacao();
@@ -122,23 +136,31 @@ async function init() {
 }
 
 async function carregarDados() {
-  const [pontosRes, horariosRes] = await Promise.all([
+  const [pontosRes, horariosRes, plenaPontosRes, plenaHorariosRes] = await Promise.all([
     fetch('./dados/pontos.json'),
     fetch('./dados/horarios.json'),
+    fetch('./dados/pontos-plena.json'),
+    fetch('./dados/horarios-plena.json'),
   ]);
 
   if (!pontosRes.ok || !horariosRes.ok) {
-    throw new Error('Falha ao buscar arquivos JSON');
+    throw new Error('Falha ao buscar arquivos JSON principais');
   }
 
-  const [pontos, horarios] = await Promise.all([
+  const [pontos, horarios, pontosPlena, horariosPlena] = await Promise.all([
     pontosRes.json(),
     horariosRes.json(),
+    plenaPontosRes.ok ? plenaPontosRes.json() : Promise.resolve([]),
+    plenaHorariosRes.ok ? plenaHorariosRes.json() : Promise.resolve(null),
   ]);
 
   state.pontos = pontos;
   state.horarios = horarios;
+  if (Array.isArray(pontosPlena) && pontosPlena.length) state.pontosPlena = pontosPlena;
+  if (horariosPlena) state.horariosPlena = horariosPlena;
   if (typeof setPontosCircular === 'function') setPontosCircular(state.pontos);
+  if (state.horariosPlena && typeof carregarConfigPlena === 'function') carregarConfigPlena(state.horariosPlena);
+  if (state.distanceCachePlena) state.distanceCachePlena.invalidate();
 }
 
 function setupNavigation() {
@@ -193,7 +215,7 @@ function setupInteractions() {
 
     if (action?.dataset.action === 'focus-map' && stopCard) {
       event.preventDefault();
-      selectStop(Number(stopCard.dataset.stopId), { scrollToMap: true });
+      selectStop(Number(stopCard.dataset.stopId), { scrollToMap: true, line: stopCard.dataset.line || null });
       return;
     }
 
@@ -230,7 +252,7 @@ function setupInteractions() {
 
     if (stopCard && !event.target.closest('a')) {
       cardClickEffect(stopCard, function () {
-        openStopModal(Number(stopCard.dataset.stopId));
+        openStopModal(Number(stopCard.dataset.stopId), stopCard.dataset.line || null);
       });
     }
   });
@@ -249,7 +271,7 @@ function setupSearch() {
   els.searchInput.addEventListener('input', () => {
     clearTimeout(debounceTimer);
     const term = normalize(els.searchInput.value);
-    if (!term || state.pontos.length === 0) {
+    if (!term || (state.pontos.length === 0 && state.pontosPlena.length === 0)) {
       hideSearchSuggestions();
       return;
     }
@@ -260,7 +282,7 @@ function setupSearch() {
 
   els.searchInput.addEventListener('focus', () => {
     const term = normalize(els.searchInput.value);
-    if (state.pontos.length === 0) return;
+    if (state.pontos.length === 0 && state.pontosPlena.length === 0) return;
     debounceTimer = setTimeout(() => {
       if (term) {
         renderSearchSuggestions(getSearchSuggestions(term));
@@ -294,15 +316,57 @@ function setupSearch() {
 }
 
 
+
+function getHomePointsWithLine() {
+  const circular = state.pontos.map(function (p) {
+    return Object.assign({}, p, { _linha: 'circular' });
+  });
+  const plena = state.pontosPlena.map(function (p) {
+    return Object.assign({}, p, { _linha: 'plena' });
+  });
+  return circular.concat(plena);
+}
+
+function getHomePointsWithDistance() {
+  return getHomePointsWithLine().map(function (ponto) {
+    const cache = ponto._linha === 'plena' ? state.distanceCachePlena : state.distanceCache;
+    const withDistance = cache ? cache.forSingle(ponto) : pontosComDistancia([ponto], state.userPosition)[0];
+    return Object.assign({}, withDistance || ponto, { _linha: ponto._linha });
+  });
+}
+
+
+window.obterPontosPlena = function (ids) {
+  if (!Array.isArray(ids)) return [];
+  return ids.map(function (id) {
+    return state.pontosPlena.find(function (p) { return p.id === id; });
+  }).filter(Boolean);
+};
+
+function getPointLine(ponto) {
+  return ponto && ponto._linha === 'plena' ? 'plena' : 'circular';
+}
+
+function getPlenaPointSchedule(pontoId, dia) {
+  const sentidos = typeof obterSentidosPlena === 'function' ? obterSentidosPlena(pontoId) : [];
+  if (!sentidos.length) return { sentido: null, horarios: [] };
+  const sentido = sentidos[0];
+  const horarios = typeof obterHorariosPlena === 'function'
+    ? obterHorariosPlena(sentido.id, dia || getCurrentDayType(), pontoId)
+    : [];
+  return { sentido: sentido, horarios: horarios };
+}
+
 function getSearchSuggestions(term) {
-  const lista = state.distanceCache ? state.distanceCache.getAll() : pontosComDistancia(state.pontos, state.userPosition);
-  const sortMode = state.distanceCache ? state.distanceCache.getSortMode() : 'ordem';
+  const lista = getHomePointsWithDistance();
+  const sortMode = state.userPosition ? 'distancia' : 'ordem';
   return sortPointsByContext(
     lista.filter((ponto) => {
       return normalize([
         ponto.nome, (ponto.apelidos || []).join(" "),
         ponto.endereco,
         ponto.bairro,
+        ponto._linha === 'plena' ? 'plena' : 'circular'
       ].join(' ')).includes(term);
     }),
     sortMode
@@ -310,18 +374,15 @@ function getSearchSuggestions(term) {
 }
 
 function getDiverseSuggestions() {
-  const lista = state.distanceCache ? state.distanceCache.getAll() : pontosComDistancia(state.pontos, state.userPosition);
-  const sortMode = state.distanceCache ? state.distanceCache.getSortMode() : 'ordem';
-  const sorted = sortPointsByContext(lista, sortMode);
-  const seenBairros = new Set();
+  const sorted = sortPointsByContext(getHomePointsWithDistance(), state.userPosition ? 'distancia' : 'ordem');
+  const seen = new Set();
   const result = [];
   for (const ponto of sorted) {
     if (result.length >= 10) break;
-    const bairroKey = normalize(ponto.bairro);
-    const isNewBairro = !seenBairros.has(bairroKey);
-    if (isNewBairro) {
+    const key = getPointLine(ponto) + ':' + normalize(ponto.bairro || ponto.nome);
+    if (!seen.has(key)) {
       result.push(ponto);
-      seenBairros.add(bairroKey);
+      seen.add(key);
     }
   }
   return result.slice(0, 10);
@@ -336,16 +397,21 @@ function renderSearchSuggestions(results) {
 
   els.searchResults.innerHTML = results
     .map((ponto) => {
-      const distanceText = typeof ponto.distancia === 'number'
-        ? `<span><i class="ti ti-navigation"></i> ${formatDistance(ponto.distancia)}</span>`
-        : '';
+      const line = getPointLine(ponto);
+      const distanceText = ponto._linha === 'plena' && ponto.localizacaoConfirmada === false
+        ? ''
+        : (typeof ponto.distancia === 'number'
+          ? `<span><i class="ti ti-navigation"></i> ${formatDistance(ponto.distancia)}</span>`
+          : '');
+      const lineTag = line === 'plena' ? '<span class="home-line-tag plena">PLENA</span>' : '';
+      const address = ponto.endereco || 'Localização exata ainda não informada';
       return `
-        <div class="search-result-item" style="z-index: 0;" data-stop-id="${ponto.id}">
+        <div class="search-result-item" style="z-index: 0;" data-stop-id="${ponto.id}" data-line="${line}">
           <div class="search-result-name">
-            <i class="ti ti-map-pin"></i>${escapeHtml(ponto.nome)}
+            <i class="ti ti-map-pin"></i>${escapeHtml(ponto.nome)} ${lineTag}
           </div>
           <div class="search-result-desc">
-            <span>${escapeHtml(ponto.endereco)} - ${escapeHtml(ponto.bairro)}</span>
+            <span>${escapeHtml(address)}${ponto.bairro ? ' - ' + escapeHtml(ponto.bairro) : ''}</span>
             ${distanceText}
           </div>
         </div>
@@ -358,7 +424,7 @@ function renderSearchSuggestions(results) {
   els.searchResults.querySelectorAll('.search-result-item').forEach((item) => {
     item.addEventListener('click', () => {
       const stopId = Number(item.dataset.stopId);
-      openStopModal(stopId);
+      openStopModal(stopId, item.dataset.line || 'circular');
       els.searchInput.value = '';
       hideSearchSuggestions();
     });
@@ -385,12 +451,15 @@ function renderFavoriteStops() {
     return;
   }
   if (els.favSubtitle) els.favSubtitle.textContent = 'Seus pontos favoritos.';
-  const lista = state.distanceCache ? state.distanceCache.getAll() : (state.userPosition ? pontosComDistancia(state.pontos, state.userPosition) : state.pontos);
-  const sortMode = state.distanceCache ? state.distanceCache.getSortMode() : (state.userPosition ? 'distancia' : 'ordem');
+  const lista = getHomePointsWithDistance();
   const favPontos = sortPointsByContext(
     lista.filter(function (p) { return favIds.indexOf(String(p.id)) !== -1; }),
-    sortMode
+    state.userPosition ? 'distancia' : 'ordem'
   );
+  if (!favPontos.length) {
+    els.favStops.innerHTML = '<div class="empty-fav">Seus favoritos salvos não estão disponíveis nos dados atuais.</div>';
+    return;
+  }
   els.favStops.innerHTML = favPontos.map(function (p) { return renderStopCard(p); }).join('');
 }
 
@@ -403,19 +472,18 @@ function renderNearbyStops() {
       : 'Permita o acesso à localização para ver os 3 pontos mais próximos de você.';
     showEmpty(els.nearbyStops, msg);
     if (els.nearbySubtitle) {
-      els.nearbySubtitle.textContent = 'A busca e a lista completa continuam disponíveis abaixo.';
+      els.nearbySubtitle.textContent = 'A busca e o mapa continuam disponíveis mesmo sem GPS.';
     }
     return;
   }
 
-  const todos = state.distanceCache ? state.distanceCache.getAll() : pontosComDistancia(state.pontos, state.userPosition);
-  const nearby = todos
-    .filter((ponto) => hasCoords(ponto) && typeof ponto.distancia === 'number')
+  const nearby = getHomePointsWithDistance()
+    .filter((ponto) => hasCoords(ponto) && typeof ponto.distancia === 'number' && !(getPointLine(ponto) === 'plena' && ponto.localizacaoConfirmada === false))
     .sort((a, b) => a.distancia - b.distancia)
     .slice(0, 3);
 
   if (els.nearbySubtitle) {
-    els.nearbySubtitle.textContent = 'Os 3 pontos mais próximos da sua localização atual.';
+    els.nearbySubtitle.textContent = 'Os 3 pontos mais próximos entre Circular e Plena.';
   }
 
   els.nearbyStops.innerHTML = nearby
@@ -424,32 +492,63 @@ function renderNearbyStops() {
 }
 
 function renderStopCard(ponto) {
-  const pass = encontrarPassagens(ponto.id);
-  const distanceText = typeof ponto.distancia === 'number'
-    ? formatDistance(ponto.distancia)
-    : hasCoords(ponto)
-      ? 'No mapa'
-      : 'Sem GPS';
+  const line = getPointLine(ponto);
+  let nextInfo;
+  let scheduleTimes = [];
+  let activeTime = null;
+
+  if (line === 'plena') {
+    const plenaNext = typeof encontrarProximoPlena === 'function'
+      ? encontrarProximoPlena(ponto.id)
+      : { encontrado: false };
+    nextInfo = plenaNext.encontrado
+      ? {
+          encontrado: true,
+          horario: plenaNext.horario,
+          label: plenaNext.estado === 'chegando' ? 'Previsto agora' : formatMinutes(plenaNext.minutosRestantes, plenaNext.horario),
+          situacao: plenaNext.estado === 'chegando' ? 'no_ponto' : 'referencia'
+        }
+      : { encontrado: false, mensagem: 'Sem horário' };
+    const plenaSchedule = getPlenaPointSchedule(ponto.id);
+    scheduleTimes = plenaSchedule.horarios.slice();
+    activeTime = plenaNext.encontrado ? plenaNext.horario : null;
+  } else {
+    nextInfo = encontrarPassagens(ponto.id);
+    const agora = new Date();
+    const agoraHoje = agora.getHours() * 60 + agora.getMinutes();
+    scheduleTimes = calcularPassagensDoPonto(ponto.id)
+      .filter(function (p) { return p.embarque && p.minutosFim >= agoraHoje; })
+      .map(function (p) { return p.horario; });
+    activeTime = nextInfo.encontrado ? nextInfo.horario : null;
+  }
+
+  const distanceText = line === 'plena' && ponto.localizacaoConfirmada === false
+    ? 'Local aproximado'
+    : (typeof ponto.distancia === 'number'
+      ? formatDistance(ponto.distancia)
+      : hasCoords(ponto) ? 'No mapa' : 'Sem GPS');
   const selected = state.selectedStopId === ponto.id ? 'selected' : '';
   const mapDisabled = hasCoords(ponto) ? '' : 'disabled';
   const routeUrl = hasCoords(ponto)
     ? `https://www.google.com/maps/dir/?api=1&destination=${ponto.lat},${ponto.lng}`
     : '';
   const isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
-  const nextClass = pass.encontrado
-    ? (pass.situacao === 'no_ponto' ? 'now' : 'waiting')
+  const nextClass = nextInfo.encontrado
+    ? (nextInfo.situacao === 'no_ponto' ? 'now' : 'waiting')
     : 'waiting';
-  const nextTimeText = pass.encontrado
-    ? pass.label
-    : (pass.mensagem || 'Sem horário');
-  const agora = new Date();
-  const agoraHoje = agora.getHours() * 60 + agora.getMinutes();
-  const chipsProximos = calcularPassagensDoPonto(ponto.id).filter(p => p.embarque && p.minutosFim >= agoraHoje);
-  const chipsVisiveis = chipsProximos.slice(0, 4);
-  const chipsExtras = Math.max(0, chipsProximos.length - 4);
+  const nextTimeText = nextInfo.encontrado
+    ? nextInfo.label
+    : (nextInfo.mensagem || 'Sem horário');
+  const chipsVisiveis = scheduleTimes.slice(0, 4);
+  const chipsExtras = Math.max(0, scheduleTimes.length - 4);
+  const addressText = ponto.endereco || 'Localização exata ainda não informada';
+  const lineTag = line === 'plena' ? '<span class="home-line-tag plena">PLENA</span>' : '';
+  const locationNote = line === 'plena' && ponto.localizacaoConfirmada === false
+    ? '<span class="location-pending"><i class="ti ti-alert-circle"></i> Localização exata a confirmar</span>'
+    : '';
 
   return `
-    <div class="card stop-card ${selected}" data-stop-id="${ponto.id}">
+    <div class="card stop-card ${selected} ${line === 'plena' ? 'plena-card' : ''}" data-stop-id="${ponto.id}" data-line="${line}">
       <div class="card-header">
         <div class="card-icon">
           <i class="ti ti-map-pin"></i>
@@ -461,19 +560,23 @@ function renderStopCard(ponto) {
           </button>
         </div>
       </div>
-      <h3 class="card-title">${escapeHtml(ponto.nome)}</h3>
-      <p class="card-address">${escapeHtml(ponto.endereco)}</p>
+      <div class="home-card-title-row">
+        <h3 class="card-title">${escapeHtml(ponto.nome)}</h3>
+        ${lineTag}
+      </div>
+      <p class="card-address">${escapeHtml(addressText)}</p>
+      ${locationNote}
       <div class="card-next-bus">
-        <span class="card-next-label"><i class="ti ti-bus"></i> Próximo ônibus</span>
-        <span class="card-next-time ${nextClass}" title="${pass.faixa ? 'Previsto entre ' + escapeAttr(pass.faixa.label) : ''}">${escapeHtml(nextTimeText)}</span>
+        <span class="card-next-label"><i class="ti ti-bus"></i> Próximo horário</span>
+        <span class="card-next-time ${nextClass}">${escapeHtml(nextTimeText)}</span>
       </div>
       <div class="card-meta">
-        <span class="meta-chip">${escapeHtml(ponto.bairro)}</span>
+        <span class="meta-chip">${escapeHtml(ponto.bairro || 'Local não informado')}</span>
       </div>
       <div class="card-horarios">
         ${chipsVisiveis
-          .map((p) => `
-            <span class="time-chip ${pass.encontrado && p.horario === pass.horario ? 'active' : 'inactive'}" title="${escapeAttr(origemPassagemCircular(p))}">${escapeHtml(rotuloPassagemCircular(p))}</span>
+          .map((time) => `
+            <span class="time-chip ${activeTime && time === activeTime ? 'active' : 'inactive'}">${escapeHtml(time)}</span>
           `)
           .join('')}
         ${chipsExtras > 0 ? `<span class="time-chip more-chip">+${chipsExtras}</span>` : ''}
@@ -484,7 +587,7 @@ function renderStopCard(ponto) {
         </button>
         ${routeUrl
           ? `<a class="card-action" href="${routeUrl}" target="_blank" rel="noopener">
-              <i class="ti ti-route"></i> Traçar rota
+              <i class="ti ti-route"></i> ${line === 'plena' && ponto.localizacaoConfirmada === false ? 'Abrir referência' : 'Traçar rota'}
             </a>`
           : `<button class="card-action" type="button" disabled>
               <i class="ti ti-route-off"></i> Sem rota
@@ -513,10 +616,10 @@ function initMap() {
   state.markerLayer = L.layerGroup().addTo(state.map);
 }
 
-function createLineMarker(lat, lng) {
+function createLineMarker(lat, lng, color) {
   const svg = [
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="36" viewBox="0 0 24 36">',
-    '<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24c0-6.6-5.4-12-12-12z" fill="' + BUS_COLOR + '"/>',
+    '<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24c0-6.6-5.4-12-12-12z" fill="' + (color || BUS_COLOR) + '"/>',
     '<circle cx="12" cy="12" r="4.5" fill="#fff"/>',
     '</svg>'
   ].join('');
@@ -552,23 +655,32 @@ function renderMapMarkers() {
   state.markerLayer.clearLayers();
   state.markers.clear();
 
-  const pontosComGps = state.pontos.filter(hasCoords);
-  pontosComGps.forEach((ponto) => {
-    const marker = createLineMarker(ponto.lat, ponto.lng)
+  const points = getHomePointsWithLine().filter(hasCoords);
+  points.forEach((ponto) => {
+    const line = getPointLine(ponto);
+    const color = line === 'plena' ? '#2196f3' : BUS_COLOR;
+    const lineName = line === 'plena' ? 'Plena' : 'Circular';
+    const locationWarning = line === 'plena' && ponto.localizacaoConfirmada === false
+      ? '<br><small>Referência aproximada; localização exata ainda não confirmada.</small>'
+      : '';
+    const marker = createLineMarker(ponto.lat, ponto.lng, color)
       .bindPopup(`
-        <strong>${escapeHtml(ponto.nome)}</strong>
-        ${escapeHtml(ponto.endereco)}<br>
-        ${escapeHtml(ponto.bairro)}
+        <strong>${escapeHtml(ponto.nome)}</strong><br>
+        <span>${escapeHtml(lineName)}</span><br>
+        ${escapeHtml(ponto.endereco || 'Localização exata ainda não informada')}<br>
+        ${escapeHtml(ponto.bairro || '')}${locationWarning}
       `)
-      .on('click', function () { openStopModal(ponto.id); });
+      .on('click', function () { openStopModal(ponto.id, line); });
 
-    enableMarkerKeyboard(marker, ponto, openStopModal);
+    enableMarkerKeyboard(marker, ponto, function () { openStopModal(ponto.id, line); });
     marker.addTo(state.markerLayer);
-    state.markers.set(ponto.id, marker);
+    state.markers.set(String(ponto.id), marker);
   });
 
   if (els.mapStatusText) {
-    els.mapStatusText.textContent = `${pontosComGps.length} pontos no mapa`;
+    const plenaCount = points.filter(function (p) { return getPointLine(p) === 'plena'; }).length;
+    const circularCount = points.length - plenaCount;
+    els.mapStatusText.textContent = circularCount + ' Circular · ' + plenaCount + ' Plena';
   }
 }
 
@@ -593,6 +705,7 @@ function clearUserLocation() {
   state.userPosition = null;
   if (state.userMarker) { state.userMarker.remove(); state.userMarker = null; }
   if (state.distanceCache) state.distanceCache.invalidate();
+  if (state.distanceCachePlena) state.distanceCachePlena.invalidate();
   renderNearbyStops();
   renderFavoriteStops();
   if (typeof Modal !== 'undefined') Modal.refreshLocation();
@@ -617,6 +730,7 @@ function requestUserLocation(options = {}) {
       state.gpsDenied = false;
       if (typeof setGpsDeniedPersisted === 'function') setGpsDeniedPersisted(false);
       if (state.distanceCache) state.distanceCache.invalidate();
+      if (state.distanceCachePlena) state.distanceCachePlena.invalidate();
 
       setLocationStatus('Localização detectada', 'Calculando...', '--');
       renderNearbyStops();
@@ -632,6 +746,7 @@ function requestUserLocation(options = {}) {
     (error) => {
       clearUserLocation();
       if (state.distanceCache) state.distanceCache.invalidate();
+      if (state.distanceCachePlena) state.distanceCachePlena.invalidate();
       state.gpsDenied = error.code === error.PERMISSION_DENIED;
       if (typeof setGpsDeniedPersisted === 'function') setGpsDeniedPersisted(state.gpsDenied);
       const message = state.gpsDenied
@@ -672,9 +787,10 @@ function updateUserMarker() {
 function updateLocationSummary() {
   if (!state.userPosition) return;
 
-  const todos = state.distanceCache ? state.distanceCache.getAll() : pontosComDistancia(state.pontos, state.userPosition);
-  const nearest = todos
-    .filter(function (p) { return hasCoords(p) && typeof p.distancia === 'number'; })
+  const nearest = getHomePointsWithDistance()
+    .filter(function (p) {
+      return hasCoords(p) && typeof p.distancia === 'number' && !(getPointLine(p) === 'plena' && p.localizacaoConfirmada === false);
+    })
     .sort((a, b) => a.distancia - b.distancia)[0];
 
   if (!nearest) {
@@ -682,8 +798,15 @@ function updateLocationSummary() {
     return;
   }
 
-  const pass = encontrarPassagens(nearest.id);
-  const nextTime = pass.encontrado ? pass.label : (pass.mensagem ? pass.mensagem : '--');
+  const line = getPointLine(nearest);
+  let nextTime = '--';
+  if (line === 'plena') {
+    const pass = encontrarProximoPlena(nearest.id);
+    nextTime = pass.encontrado ? pass.horario : 'Sem horário';
+  } else {
+    const pass = encontrarPassagens(nearest.id);
+    nextTime = pass.encontrado ? pass.label : (pass.mensagem ? pass.mensagem : '--');
+  }
   setLocationStatus(
     'Localização detectada',
     `${nearest.nome} (${formatDistance(nearest.distancia)})`,
@@ -691,73 +814,106 @@ function updateLocationSummary() {
   );
 
   if (!state.selectedStopId) {
-    selectStop(nearest.id);
+    selectStop(nearest.id, { line: line });
   }
 }
 
-function openStopModal(stopId) {
-  const ponto = state.pontos.find(function (p) { return p.id === stopId; });
+function openStopModal(stopId, line) {
+  let resolvedLine = line;
+  let ponto = null;
+  if (resolvedLine === 'plena') ponto = state.pontosPlena.find(function (p) { return p.id === stopId; });
+  if (!ponto && resolvedLine === 'circular') ponto = state.pontos.find(function (p) { return p.id === stopId; });
+  if (!ponto) {
+    ponto = state.pontos.find(function (p) { return p.id === stopId; });
+    resolvedLine = ponto ? 'circular' : 'plena';
+  }
+  if (!ponto) ponto = state.pontosPlena.find(function (p) { return p.id === stopId; });
   if (!ponto) return;
 
-  const pass = encontrarPassagens(ponto.id);
-  const next = pass.encontrado
-    ? { time: pass.horario, label: pass.label, minutes: pass.minutos, faixa: pass.faixa, situacao: pass.situacao, aviso: pass.aviso, tipo: pass.tipo }
-    : { time: '--', label: pass.mensagem || 'Sem horário', minutes: Number.POSITIVE_INFINITY, faixa: null, situacao: pass.situacao };
-  const horarios = obterHorariosDoPonto(ponto.id);
-  const isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
+  let next;
+  let horarios = [];
+  if (resolvedLine === 'plena') {
+    const pass = encontrarProximoPlena(ponto.id);
+    next = pass.encontrado
+      ? { time: pass.horario, label: formatMinutes(pass.minutosRestantes, pass.horario), minutes: pass.minutosRestantes }
+      : { time: '--', label: 'Sem horário', minutes: Number.POSITIVE_INFINITY };
+  } else {
+    const pass = encontrarPassagens(ponto.id);
+    next = pass.encontrado
+      ? { time: pass.horario, label: pass.label, minutes: pass.minutos, faixa: pass.faixa, situacao: pass.situacao, aviso: pass.aviso, tipo: pass.tipo }
+      : { time: '--', label: pass.mensagem || 'Sem horário', minutes: Number.POSITIVE_INFINITY, faixa: null, situacao: pass.situacao };
+    horarios = obterHorariosDoPonto(ponto.id);
+  }
 
+  const isFav = typeof Favorites !== 'undefined' && Favorites.isFavorite(String(ponto.id));
   let distancia = null;
-  if (state.userPosition && hasCoords(ponto)) {
+  if (state.userPosition && hasCoords(ponto) && !(resolvedLine === 'plena' && ponto.localizacaoConfirmada === false)) {
     distancia = distanceKm(state.userPosition.lat, state.userPosition.lng, ponto.lat, ponto.lng);
   }
 
-  const allLinePoints = state.pontos.slice().sort(function (a, b) { return (a.ordem || 0) - (b.ordem || 0); });
+  const allLinePoints = (resolvedLine === 'plena' ? state.pontosPlena : state.pontos)
+    .slice().sort(function (a, b) { return (a.ordem || 0) - (b.ordem || 0); });
 
   Modal.open({
     ponto: ponto,
+    linhas: [resolvedLine],
     next: next,
     horarios: horarios,
-    lineColor: BUS_COLOR,
+    lineColor: resolvedLine === 'plena' ? '#2196f3' : BUS_COLOR,
     distancia: distancia,
     isFav: isFav,
     allLinePoints: allLinePoints,
     onMainMapFocus: function (p) {
       if (hasCoords(p) && state.map) {
         state.map.setView([p.lat, p.lng], 16, { animate: true });
-        var marker = state.markers.get(p.id);
+        var marker = state.markers.get(String(p.id));
         if (marker) marker.openPopup();
       }
       document.getElementById('mapa')?.scrollIntoView({ behavior: 'smooth' });
     }
   });
 
-  selectStop(stopId);
+  selectStop(stopId, { line: resolvedLine });
 }
 
 function selectStop(stopId, options = {}) {
-  const ponto = state.pontos.find((item) => item.id === stopId);
+  let line = options.line || null;
+  let ponto = line === 'plena'
+    ? state.pontosPlena.find((item) => item.id === stopId)
+    : state.pontos.find((item) => item.id === stopId);
+  if (!ponto && !line) {
+    ponto = state.pontos.find((item) => item.id === stopId);
+    line = ponto ? 'circular' : 'plena';
+    if (!ponto) ponto = state.pontosPlena.find((item) => item.id === stopId);
+  }
   if (!ponto) return;
 
   state.selectedStopId = stopId;
-  const next = encontrarPassagens(stopId);
+  let nextText;
+  if (line === 'plena') {
+    const next = encontrarProximoPlena(stopId);
+    nextText = next.encontrado ? `próximo horário ${next.horario}` : 'sem horário disponível';
+  } else {
+    const next = encontrarPassagens(stopId);
+    nextText = next.encontrado ? `previsão ${next.label}` : (next.mensagem || 'sem referência disponível');
+  }
 
   document.querySelectorAll('[data-stop-id]').forEach((card) => {
-    card.classList.toggle('selected', Number(card.dataset.stopId) === stopId);
+    card.classList.toggle('selected', Number(card.dataset.stopId) === stopId && (!card.dataset.line || card.dataset.line === line));
   });
 
-  if (els.selectedStopName) els.selectedStopName.textContent = ponto.nome;
+  if (els.selectedStopName) els.selectedStopName.textContent = ponto.nome + (line === 'plena' ? ' · Plena' : '');
   if (els.selectedStopDetails) {
-    const nextText = next.encontrado
-      ? `previsão ${next.label}`
-      : (next.mensagem || 'sem referência disponível');
+    const address = ponto.endereco || 'Localização exata ainda não informada';
+    const pending = line === 'plena' && ponto.localizacaoConfirmada === false ? ' · referência aproximada' : '';
     els.selectedStopDetails.textContent = hasCoords(ponto)
-      ? `${ponto.endereco} - ${nextText}`
-      : `${ponto.endereco} - este ponto ainda não tem latitude e longitude.`;
+      ? `${address} - ${nextText}${pending}`
+      : `${address} - sem coordenadas cadastradas.`;
   }
 
   if (hasCoords(ponto) && state.map) {
     state.map.setView([ponto.lat, ponto.lng], 16, { animate: true });
-    state.markers.get(ponto.id)?.openPopup();
+    state.markers.get(String(ponto.id))?.openPopup();
   }
 
   if (options.scrollToMap) {
@@ -773,17 +929,51 @@ function setLocationStatus(location, nearest, departure) {
 
 function refreshLiveDepartures() {
   updateLocationSummary();
-  if (typeof encontrarPassagens !== 'function') return;
 
   document.querySelectorAll('.stop-card').forEach((card) => {
     const stopId = Number(card.dataset.stopId);
-    const pass = encontrarPassagens(stopId);
-
+    const line = card.dataset.line || 'circular';
     const timeEl = card.querySelector('.card-next-time');
+    const chipsWrap = card.querySelector('.card-horarios');
+
+    if (line === 'plena') {
+      const pass = typeof encontrarProximoPlena === 'function'
+        ? encontrarProximoPlena(stopId)
+        : { encontrado: false };
+      if (timeEl) {
+        timeEl.classList.remove('now', 'waiting');
+        if (!pass.encontrado) {
+          timeEl.textContent = 'Sem horário';
+          timeEl.classList.add('waiting');
+        } else {
+          timeEl.textContent = pass.estado === 'chegando'
+            ? 'Previsto agora'
+            : formatMinutes(pass.minutosRestantes, pass.horario);
+          timeEl.classList.add(pass.estado === 'chegando' ? 'now' : 'waiting');
+        }
+      }
+      if (chipsWrap) {
+        const schedule = getPlenaPointSchedule(stopId);
+        const nextTime = pass.encontrado ? pass.horario : null;
+        const now = new Date();
+        const minute = now.getHours() * 60 + now.getMinutes();
+        const future = schedule.horarios.filter(function (t) { return timeToMinutes(t) >= minute; });
+        const visible = future.slice(0, 4);
+        const extra = Math.max(0, future.length - visible.length);
+        chipsWrap.innerHTML = visible.map(function (t) {
+          return '<span class="time-chip ' + (t === nextTime ? 'active' : 'inactive') + '">' + escapeHtml(t) + '</span>';
+        }).join('') + (extra ? '<span class="time-chip more-chip">+' + extra + '</span>' : '');
+      }
+      return;
+    }
+
+    if (typeof encontrarPassagens !== 'function') return;
+    const pass = encontrarPassagens(stopId);
     if (timeEl) {
       timeEl.classList.remove('now', 'waiting');
       if (!pass.encontrado) {
         timeEl.textContent = pass.mensagem || 'Sem horário';
+        timeEl.classList.add('waiting');
       } else {
         timeEl.textContent = pass.label;
         timeEl.classList.add(pass.situacao === 'no_ponto' ? 'now' : 'waiting');
@@ -791,38 +981,40 @@ function refreshLiveDepartures() {
       }
     }
 
-    const rangeEl = card.querySelector('.range-chip');
-    if (rangeEl) {
-      rangeEl.textContent = pass.encontrado && pass.faixa ? '≈ ' + pass.faixa.label : '';
-    }
-
-    const chipsWrap = card.querySelector('.card-horarios');
     if (chipsWrap) {
       const now = new Date();
       const minuto = now.getHours() * 60 + now.getMinutes();
-      chipsWrap.innerHTML = calcularPassagensDoPonto(stopId).filter(p => p.embarque && p.minutosFim >= minuto).slice(0,4)
-        .map(p => '<span class="time-chip">' + escapeHtml(rotuloPassagemCircular(p)) + '</span>').join('');
+      const future = calcularPassagensDoPonto(stopId).filter(function (p) { return p.embarque && p.minutosFim >= minuto; });
+      const visible = future.slice(0, 4);
+      const extra = Math.max(0, future.length - visible.length);
+      chipsWrap.innerHTML = visible.map(function (p) {
+        const active = pass.encontrado && p.horario === pass.horario;
+        return '<span class="time-chip ' + (active ? 'active' : 'inactive') + '">' + escapeHtml(rotuloPassagemCircular(p)) + '</span>';
+      }).join('') + (extra ? '<span class="time-chip more-chip">+' + extra + '</span>' : '');
     }
-    const chips = card.querySelectorAll('.card-horarios .time-chip');
-    chips.forEach((chip) => {
-      const isActive = pass.encontrado && chip.textContent.trim() === pass.label;
-      chip.classList.toggle('active', isActive);
-      chip.classList.toggle('inactive', !isActive);
-    });
   });
 
   if (state.selectedStopId && els.selectedStopDetails) {
-    const ponto = state.pontos.find(
-      (p) => p.id === state.selectedStopId
-    );
-
-    if (ponto && hasCoords(ponto)) {
-      const pass = encontrarPassagens(state.selectedStopId);
-
-      els.selectedStopDetails.textContent =
-        pass.encontrado
-          ? `${ponto.endereco} - previsão ${pass.label}`
-          : `${ponto.endereco} - ${pass.mensagem || 'sem referência disponível'}`;
+    let ponto = state.pontos.find(function (p) { return p.id === state.selectedStopId; });
+    let line = 'circular';
+    if (!ponto) {
+      ponto = state.pontosPlena.find(function (p) { return p.id === state.selectedStopId; });
+      line = 'plena';
+    }
+    if (ponto) {
+      const address = ponto.endereco || 'Localização exata ainda não informada';
+      if (line === 'plena') {
+        const pass = encontrarProximoPlena(ponto.id);
+        const next = pass.encontrado ? 'próximo horário ' + pass.horario : 'sem horário disponível';
+        const pending = ponto.localizacaoConfirmada === false ? ' · referência aproximada' : '';
+        els.selectedStopDetails.textContent = address + ' - ' + next + pending;
+      } else {
+        const pass = encontrarPassagens(ponto.id);
+        els.selectedStopDetails.textContent = pass.encontrado
+          ? address + ' - previsão ' + pass.label
+          : address + ' - ' + (pass.mensagem || 'sem referência disponível');
+      }
     }
   }
 }
+

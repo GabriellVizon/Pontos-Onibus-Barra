@@ -79,6 +79,11 @@ test('calendário de configuração coincide com JSON do projeto',()=>{
 test('Plena preserva cálculo por dia',()=>{
  carregarConfigPlena(JSON.parse(fs.readFileSync(path.join(root,'dados/horarios-plena.json'))));assert.equal(encontrarPassagensPlena(101,'barra-igaracu','uteis',date(17,0)).horario,'17:35');
 });
+test('Plena usa somente os horários do dia atual ao calcular o próximo ônibus',()=>{
+ carregarConfigPlena(JSON.parse(fs.readFileSync(path.join(root,'dados/horarios-plena.json'))));
+ assert.equal(encontrarProximoPlena(101,date(17,0,12)).horario,'18:05');
+ assert.equal(encontrarProximoPlena(101,date(17,0,13)).horario,'18:50');
+});
 test('todos os pontos cadastrados possuem horários, incluindo as correspondências informadas',()=>{
  for(const p of pontos)assert.ok(obterHorariosDoPonto(p.id,'uteis').length,'Ponto sem horário: '+p.id);
  assert.deepEqual(obterHorariosDoPonto(15,'uteis'),obterHorariosDoPonto(45,'uteis'));

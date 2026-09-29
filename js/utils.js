@@ -176,9 +176,14 @@ function loadCache() {
   } catch (e) { return null; }
 }
 
-function saveCache(pontos, horarios) {
+function saveCache(pontos, horarios, pontosPlena, horariosPlena) {
   try {
-    localStorage.setItem('busCacheV2', JSON.stringify({ pontos: pontos, horarios: horarios }));
+    localStorage.setItem('busCacheV2', JSON.stringify({
+      pontos: pontos,
+      horarios: horarios,
+      pontosPlena: Array.isArray(pontosPlena) ? pontosPlena : [],
+      horariosPlena: horariosPlena || null
+    }));
   } catch (e) {}
 }
 

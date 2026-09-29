@@ -1,4 +1,4 @@
-const CACHE_NAME = 'barrabus-1.0-rc1';
+const CACHE_NAME = 'barrabus-1.0-rc2';
 
 const PRE_CACHE_URLS = [
   './index.html',

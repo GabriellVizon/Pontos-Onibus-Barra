@@ -17,7 +17,7 @@ Base: ZIP Pontos-Onibus-Barra (2).zip fornecido pelo responsável. A revisão ve
 
 - **15 / 45**: Banca de Calçados e Divinitos compartilham coordenadas exatamente iguais. Correspondência confirmada anteriormente pelo responsável. IDs mantidos para preservar favoritos e compatibilidade; não foram criados novos pontos.
 - **11 / 10**: Prédio da Marinha usa os horários do Boca Rica por uma correspondência já existente, explicitamente provisória. Mantidos os registros e posições distintos. Confirmar em campo se é uma mesma parada ou duas paradas próximas antes de fundir qualquer cadastro.
-- **Plena 101–104**: endereços ainda são referências genéricas (“Ponto de embarque central/COHAB”). Não foram inventados números ou ruas. Confirmar a localização física e detalhar esses endereços quando houver informação confiável.
+- **Plena 101–104**: a localização física exata continua sem confirmação. O cadastro agora marca `localizacaoConfirmada: false`; os marcadores azuis exibidos no mapa são somente referências aproximadas e a interface não usa esses registros para afirmar distância exata ou ponto mais próximo. Confirmar rua/número/coordenadas antes de habilitar rota precisa.
 - Demais posições não foram remarcadas apenas pela proximidade com outro ponto: podem representar sentidos ou paradas diferentes.
 
 ## Nomes atualizados

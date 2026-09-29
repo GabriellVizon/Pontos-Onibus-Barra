@@ -401,31 +401,20 @@ function encontrarProximoPlena(pontoId, agora) {
         return { encontrado: false, estado: "nao_passa", pontoId: pontoId };
     }
 
-    var agoraEmMinutos = agora ? agora.getHours() * 60 + agora.getMinutes() : null;
+    var agoraCalc = agora || new Date();
+    var dia = agoraCalc.getDay();
+    var diaTipo = dia === 0 ? 'domingo' : dia === 6 ? 'sabado' : 'uteis';
+    var agoraEmMinutos = agoraCalc.getHours() * 60 + agoraCalc.getMinutes();
     var melhor = null;
 
     sentidos.forEach(function (sentido) {
         var ph = sentido.pontosHorarios ? sentido.pontosHorarios[String(pontoId)] : null;
         if (!ph) return;
 
-        var todosHorarios = [];
-        if (ph.uteis) todosHorarios = todosHorarios.concat(ph.uteis);
-        if (ph.sabado) todosHorarios = todosHorarios.concat(ph.sabado);
-        if (ph.domingo) todosHorarios = todosHorarios.concat(ph.domingo);
-        if (ph.feriado) todosHorarios = todosHorarios.concat(ph.feriado);
-
-        if (todosHorarios.length === 0) return;
-
-        var horariosUnicos = [];
-        var vistos = {};
-        todosHorarios.forEach(function (h) {
-            if (!vistos[h]) { horariosUnicos.push(h); vistos[h] = true; }
-        });
-
-        horariosUnicos.forEach(function (horarioSaida) {
+        var horarios = Array.isArray(ph[diaTipo]) ? ph[diaTipo].slice() : [];
+        horarios.forEach(function (horarioSaida) {
             var hMin = horarioParaMinutos(horarioSaida);
-
-            if (agoraEmMinutos !== null && hMin < agoraEmMinutos) return;
+            if (hMin < agoraEmMinutos) return;
 
             if (!melhor || hMin < horarioParaMinutos(melhor.horario)) {
                 melhor = {
@@ -445,10 +434,8 @@ function encontrarProximoPlena(pontoId, agora) {
         return { encontrado: false, estado: "encerrado", pontoId: pontoId };
     }
 
-    var agoraCalc = agora || new Date();
-    var agoraMin = agoraCalc.getHours() * 60 + agoraCalc.getMinutes();
     var horarioMin = horarioParaMinutos(melhor.horario);
-    var diff = horarioMin - agoraMin;
+    var diff = horarioMin - agoraEmMinutos;
     var estado = diff <= 1 ? "chegando" : "proximo";
 
     return {
